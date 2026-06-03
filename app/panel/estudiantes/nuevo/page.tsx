@@ -36,7 +36,7 @@ export default function NewStudentPage() {
       "/api/students",
       { method: "POST", body: toPayload(values) }
     );
-    router.replace(`/panel/estudiantes/${student.id}`);
+    router.replace(`/panel/estudiantes/detalle?id=${student.id}`);
   }
 
   return (

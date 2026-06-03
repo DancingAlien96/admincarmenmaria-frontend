@@ -23,7 +23,7 @@ export default function NewActaPage() {
         })),
       },
     });
-    router.replace(`/panel/actas/${acta.id}`);
+    router.replace(`/panel/actas/detalle?id=${acta.id}`);
   }
 
   return (

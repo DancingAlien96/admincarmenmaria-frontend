@@ -1,18 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { ActaDetail } from "@/lib/types";
-import {
-  ActaForm,
-  type ActaFormValues,
-} from "@/components/acta-form";
+import { ActaForm, type ActaFormValues } from "@/components/acta-form";
 
-export default function EditActaPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+function EditActaInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const router = useRouter();
   const [initial, setInitial] = useState<ActaFormValues | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +53,7 @@ export default function EditActaPage() {
         })),
       },
     });
-    router.replace(`/panel/actas/${id}`);
+    router.replace(`/panel/actas/detalle?id=${id}`);
   }
 
   if (loading || !initial) return <p className="text-gray-400">Cargando…</p>;
@@ -64,7 +61,7 @@ export default function EditActaPage() {
   return (
     <div>
       <Link
-        href={`/panel/actas/${id}`}
+        href={`/panel/actas/detalle?id=${id}`}
         className="text-sm text-brand-600 hover:underline"
       >
         ← Volver al acta
@@ -76,5 +73,14 @@ export default function EditActaPage() {
         onSubmit={handleSubmit}
       />
     </div>
+  );
+}
+
+// useSearchParams requiere un limite de Suspense en exportacion estatica.
+export default function EditActaPage() {
+  return (
+    <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
+      <EditActaInner />
+    </Suspense>
   );
 }

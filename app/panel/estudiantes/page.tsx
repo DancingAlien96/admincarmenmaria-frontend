@@ -122,7 +122,7 @@ export default function StudentsPage() {
                 <tr key={s.id} className="hover:bg-brand-50/40">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/panel/estudiantes/${s.id}`}
+                      href={`/panel/estudiantes/detalle?id=${s.id}`}
                       className="font-medium text-brand-700 hover:underline"
                     >
                       {s.fullName}

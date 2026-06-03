@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { GraduateDetail } from "@/lib/types";
-import { useUploadThing } from "@/lib/uploadthing";
+import { uploadFile } from "@/lib/upload";
 
-export default function GraduateDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+function GraduateDetailInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const canEdit = canAccess(user, "DIPLOMAS", "EDITOR");
 
@@ -69,6 +69,15 @@ export default function GraduateDetailPage() {
   );
 }
 
+// useSearchParams requiere un limite de Suspense en exportacion estatica.
+export default function GraduateDetailPage() {
+  return (
+    <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
+      <GraduateDetailInner />
+    </Suspense>
+  );
+}
+
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
@@ -97,7 +106,7 @@ function InfoCard({ graduate }: { graduate: GraduateDetail }) {
         <p className="mt-4 text-xs text-gray-400">
           Migrado desde el expediente de{" "}
           <Link
-            href={`/panel/estudiantes/${graduate.student.id}`}
+            href={`/panel/estudiantes/detalle?id=${graduate.student.id}`}
             className="text-brand-600 hover:underline"
           >
             {graduate.student.fullName}
@@ -118,28 +127,29 @@ function DiplomaCard({
   onChange: () => Promise<void>;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const { startUpload, isUploading } = useUploadThing("graduateDiploma", {
-    onClientUploadComplete: async (res) => {
-      const file = res?.[0];
-      if (!file) return;
-      await api(`/api/graduates/${graduate.id}`, {
-        method: "PATCH",
-        body: {
-          diplomaUrl: file.serverData.url,
-          diplomaKey: file.serverData.key,
-        },
-      });
-      await onChange();
-    },
-    onUploadError: (e) => setError(e.message),
-  });
+  const [isUploading, setIsUploading] = useState(false);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
-    await startUpload([file]);
-    e.target.value = "";
+    setIsUploading(true);
+    try {
+      const uploaded = await uploadFile(file);
+      await api(`/api/graduates/${graduate.id}`, {
+        method: "PATCH",
+        body: {
+          diplomaUrl: uploaded.url,
+          diplomaKey: uploaded.key,
+        },
+      });
+      await onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al subir");
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
   }
 
   return (

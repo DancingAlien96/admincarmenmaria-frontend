@@ -268,7 +268,7 @@ export default function PaymentsPage() {
                   <td className="px-4 py-3">
                     {p.student ? (
                       <Link
-                        href={`/panel/estudiantes/${p.student.id}`}
+                        href={`/panel/estudiantes/detalle?id=${p.student.id}`}
                         className="text-brand-700 hover:underline"
                       >
                         {p.student.fullName}
@@ -359,7 +359,7 @@ export default function PaymentsPage() {
               <div className="mt-1 text-sm">
                 {p.student ? (
                   <Link
-                    href={`/panel/estudiantes/${p.student.id}`}
+                    href={`/panel/estudiantes/detalle?id=${p.student.id}`}
                     className="text-brand-700 hover:underline"
                   >
                     {p.student.fullName}

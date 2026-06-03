@@ -100,7 +100,7 @@ export default function GraduatesPage() {
                 <tr key={g.id} className="hover:bg-brand-50/40">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/panel/diplomas/${g.id}`}
+                      href={`/panel/diplomas/detalle?id=${g.id}`}
                       className="font-medium text-brand-700 hover:underline"
                     >
                       {g.fullName}
@@ -151,7 +151,7 @@ export default function GraduatesPage() {
             >
               <div className="flex items-start justify-between gap-2">
                 <Link
-                  href={`/panel/diplomas/${g.id}`}
+                  href={`/panel/diplomas/detalle?id=${g.id}`}
                   className="font-medium text-brand-700 hover:underline"
                 >
                   {g.fullName}

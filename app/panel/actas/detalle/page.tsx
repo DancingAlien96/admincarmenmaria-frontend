@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api, apiUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { ActaDetail } from "@/lib/types";
 
-export default function ActaDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+function ActaDetailInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const canEdit = canAccess(user, "ACTAS", "EDITOR");
   const [acta, setActa] = useState<ActaDetail | null>(null);
@@ -82,7 +82,7 @@ export default function ActaDetailPage() {
         </div>
         <div className="flex gap-2">
           <Link
-            href={`/panel/actas/${acta.id}/editar`}
+            href={`/panel/actas/editar?id=${acta.id}`}
             className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
           >
             Editar
@@ -167,6 +167,15 @@ export default function ActaDetailPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+// useSearchParams requiere un limite de Suspense en exportacion estatica.
+export default function ActaDetailPage() {
+  return (
+    <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
+      <ActaDetailInner />
+    </Suspense>
   );
 }
 

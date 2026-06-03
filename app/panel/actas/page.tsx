@@ -106,7 +106,7 @@ export default function ActasPage() {
                 <tr key={a.id} className="hover:bg-brand-50/40">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/panel/actas/${a.id}`}
+                      href={`/panel/actas/detalle?id=${a.id}`}
                       className="font-medium text-brand-700 hover:underline"
                     >
                       {a.actaNumber}
@@ -163,7 +163,7 @@ export default function ActasPage() {
             >
               <div className="flex items-start justify-between gap-2">
                 <Link
-                  href={`/panel/actas/${a.id}`}
+                  href={`/panel/actas/detalle?id=${a.id}`}
                   className="font-medium text-brand-700 hover:underline"
                 >
                   Acta {a.actaNumber}

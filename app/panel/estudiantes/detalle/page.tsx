@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -16,7 +16,7 @@ import {
   StudentForm,
   type StudentFormValues,
 } from "@/components/student-form";
-import { useUploadThing } from "@/lib/uploadthing";
+import { uploadFile } from "@/lib/upload";
 
 const STATUSES: StudentStatus[] = ["INSCRITO", "ACTIVO", "EGRESADO", "BAJA"];
 const DOC_TYPES = Object.keys(DOC_TYPE_LABELS) as DocumentType[];
@@ -41,9 +41,9 @@ function toFormValues(s: StudentDetail): StudentFormValues {
   };
 }
 
-export default function StudentDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+function StudentDetailInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const canEdit = canAccess(user, "STUDENTS", "EDITOR");
 
@@ -160,6 +160,15 @@ export default function StudentDetailPage() {
   );
 }
 
+// useSearchParams requiere un limite de Suspense en exportacion estatica.
+export default function StudentDetailPage() {
+  return (
+    <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
+      <StudentDetailInner />
+    </Suspense>
+  );
+}
+
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
@@ -226,32 +235,32 @@ function DocumentsCard({
 }) {
   const [type, setType] = useState<DocumentType>("DPI");
   const [error, setError] = useState<string | null>(null);
-
-  const { startUpload, isUploading } = useUploadThing("studentDocument", {
-    onClientUploadComplete: async (res) => {
-      // Tras subir a UploadThing, registramos la referencia (URL) en el backend
-      const file = res?.[0];
-      if (!file) return;
-      await api(`/api/students/${student.id}/documents`, {
-        method: "POST",
-        body: {
-          type,
-          fileName: file.name,
-          fileUrl: file.serverData.url,
-          fileKey: file.serverData.key,
-        },
-      });
-      await onChange();
-    },
-    onUploadError: (e) => setError(e.message),
-  });
+  const [isUploading, setIsUploading] = useState(false);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
-    await startUpload([file]);
-    e.target.value = ""; // permite volver a subir el mismo archivo
+    setIsUploading(true);
+    try {
+      // Sube al backend (optimiza imagenes) y registra la referencia.
+      const uploaded = await uploadFile(file);
+      await api(`/api/students/${student.id}/documents`, {
+        method: "POST",
+        body: {
+          type,
+          fileName: uploaded.name,
+          fileUrl: uploaded.url,
+          fileKey: uploaded.key,
+        },
+      });
+      await onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al subir");
+    } finally {
+      setIsUploading(false);
+      e.target.value = ""; // permite volver a subir el mismo archivo
+    }
   }
 
   async function remove(docId: string) {

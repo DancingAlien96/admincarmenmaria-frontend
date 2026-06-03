@@ -41,7 +41,7 @@ export default function NewGraduatePage() {
           },
         }
       );
-      router.replace(`/panel/diplomas/${graduate.id}`);
+      router.replace(`/panel/diplomas/detalle?id=${graduate.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Error al registrar");
     } finally {
