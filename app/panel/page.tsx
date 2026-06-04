@@ -31,9 +31,9 @@ const MODULES: ModuleCard[] = [
   {
     href: "/panel/recordatorios",
     title: "Recordatorios",
-    description: "Alertas automáticas de colegiatura por WhatsApp / correo.",
+    description: "Bot de WhatsApp y notificaciones automáticas de colegiatura.",
     section: "REMINDERS",
-    ready: false,
+    ready: true,
   },
   {
     href: "/panel/dashboard",

@@ -267,3 +267,34 @@ export interface DashboardData {
     balance: number;
   }[];
 }
+
+// --- Módulo 3: WhatsApp / Recordatorios ---
+
+export type WaDirection = "INBOUND" | "OUTBOUND";
+export type WaStatus =
+  | "RECEIVED"
+  | "SENT"
+  | "DELIVERED"
+  | "READ"
+  | "FAILED";
+
+export interface WhatsappMessage {
+  id: string;
+  direction: WaDirection;
+  phone: string;
+  body: string;
+  status: WaStatus;
+  kind: string | null;
+  wamid: string | null;
+  error: string | null;
+  createdAt: string;
+  student: { id: string; fullName: string } | null;
+}
+
+export interface BotConfig {
+  id: number;
+  enabled: boolean;
+  knowledgeBase: string;
+  systemPrompt: string | null;
+  updatedAt: string;
+}
