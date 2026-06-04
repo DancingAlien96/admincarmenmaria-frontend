@@ -36,6 +36,7 @@ export default function RemindersPage() {
 
       <div className="space-y-6">
         {canEdit && <BotConfigCard />}
+        {canEdit && <BulkSendCard />}
         {canEdit && <ManualSendCard />}
         <MessageLog />
       </div>
@@ -138,6 +139,68 @@ function BotConfigCard() {
       >
         {saving ? "Guardando…" : "Guardar configuración"}
       </button>
+    </section>
+  );
+}
+
+function BulkSendCard() {
+  const [templateName, setTemplateName] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  async function send() {
+    if (!templateName.trim()) {
+      setResult("Indica el nombre de la plantilla aprobada en YCloud.");
+      return;
+    }
+    if (
+      !confirm(
+        "Se enviará la plantilla a TODOS los estudiantes activos con teléfono. ¿Continuar?"
+      )
+    )
+      return;
+    setSending(true);
+    setResult(null);
+    try {
+      const r = await api<{ total: number; sent: number; skipped: number }>(
+        "/api/whatsapp/bulk",
+        { method: "POST", body: { templateName: templateName.trim() } }
+      );
+      setResult(`Enviados: ${r.sent} · Omitidos: ${r.skipped} · Total: ${r.total}`);
+    } catch (err) {
+      setResult(err instanceof ApiError ? err.message : "Error en el envío");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <h2 className="mb-1 font-semibold text-brand-800">Envío masivo</h2>
+      <p className="mb-4 text-xs text-gray-500">
+        Envía una plantilla aprobada a todos los estudiantes activos. La
+        plantilla debe usar solo {"{{1}}"} = nombre del estudiante.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <input
+          placeholder="Nombre de la plantilla (ej. aviso_general)"
+          value={templateName}
+          onChange={(e) => setTemplateName(e.target.value)}
+          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        <button
+          onClick={() => void send()}
+          disabled={sending}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        >
+          {sending ? "Enviando…" : "Enviar a todos los activos"}
+        </button>
+      </div>
+      {result && (
+        <p className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
+          {result}
+        </p>
+      )}
     </section>
   );
 }
