@@ -298,3 +298,24 @@ export interface BotConfig {
   systemPrompt: string | null;
   updatedAt: string;
 }
+
+// --- Overview (pagina de inicio) ---
+
+export interface OverviewData {
+  year: number;
+  students: {
+    total: number;
+    byStatus: { INSCRITO: number; ACTIVO: number; EGRESADO: number; BAJA: number };
+  };
+  graduatesTotal: number;
+  actasTotal: number;
+  finance: {
+    incomeYear: number;
+    expenseYear: number;
+    balanceYear: number;
+    moraTotal: number;
+  };
+  paymentsBySource: { source: PaymentSource; total: number; count: number }[];
+  monthlyIncome: { label: string; income: number }[];
+  whatsappOutbound: number;
+}
