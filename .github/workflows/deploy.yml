@@ -23,6 +23,12 @@ jobs:
           script: |
             set -e
             cd /opt/carmenmaria/frontend
+            echo "→ Verificando .env.local..."
+            if [ ! -f .env.local ]; then
+              echo "❌ ERROR: .env.local no existe. Copia .env.example:"
+              echo "   cp .env.example .env.local"
+              exit 1
+            fi
             echo "→ Trayendo últimos cambios de main..."
             git fetch --prune origin
             git reset --hard origin/main
