@@ -8,7 +8,23 @@ import type {
   PaymentSource,
   PermissionLevel,
   StudentStatus,
+  TeacherDocType,
+  TeacherRole,
 } from "./types";
+
+export const TEACHER_ROLE_LABELS: Record<TeacherRole, string> = {
+  PRACTICA_HOSPITALARIA: "Práctica Hospitalaria",
+  PRACTICA_COMUNITARIA: "Práctica Comunitaria",
+  TEORIA: "Teoría",
+};
+
+export const TEACHER_DOC_LABELS: Record<TeacherDocType, string> = {
+  CV: "Currículum (CV)",
+  DPI: "DPI",
+  TITULO: "Título",
+  COLEGIADO: "Colegiado",
+  OTRO: "Otro",
+};
 
 export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
   SALARIOS: "Salarios y honorarios",
@@ -57,14 +73,12 @@ export const SECTION_LABELS: Record<ModuleSection, string> = {
 };
 
 export const STATUS_LABELS: Record<StudentStatus, string> = {
-  INSCRITO: "Inscrito",
   ACTIVO: "Activo",
   EGRESADO: "Egresado",
   BAJA: "Baja definitiva",
 };
 
 export const STATUS_STYLES: Record<StudentStatus, string> = {
-  INSCRITO: "bg-amber-100 text-amber-800",
   ACTIVO: "bg-green-100 text-green-800",
   EGRESADO: "bg-blue-100 text-blue-800",
   BAJA: "bg-gray-200 text-gray-700",

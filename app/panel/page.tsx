@@ -109,7 +109,7 @@ export default function PanelHome() {
               <div className="grid grid-cols-2 gap-4">
                 <MiniStat label="Egresos del año" value={formatGTQ(data.finance.expenseYear)} />
                 <MiniStat label="Actas generadas" value={String(data.actasTotal)} />
-                <MiniStat label="Inscritos" value={String(data.students.byStatus.INSCRITO)} />
+                <MiniStat label="De baja" value={String(data.students.byStatus.BAJA)} />
                 <MiniStat label="Mensajes WhatsApp" value={String(data.whatsappOutbound)} />
               </div>
             </section>
@@ -171,7 +171,6 @@ function IncomeChart({ data }: { data: { label: string; income: number }[] }) {
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   ACTIVO: { label: "Activos", color: "bg-green-500" },
-  INSCRITO: { label: "Inscritos", color: "bg-amber-500" },
   EGRESADO: { label: "Egresados", color: "bg-brand-500" },
   BAJA: { label: "Baja", color: "bg-gray-400" },
 };
@@ -187,7 +186,7 @@ function StatusBars({
     return <p className="text-sm text-gray-400">Sin estudiantes registrados.</p>;
   return (
     <div className="space-y-3">
-      {(["ACTIVO", "INSCRITO", "EGRESADO", "BAJA"] as const).map((s) => {
+      {(["ACTIVO", "EGRESADO", "BAJA"] as const).map((s) => {
         const n = byStatus[s] ?? 0;
         const pct = total > 0 ? Math.round((n / total) * 100) : 0;
         return (

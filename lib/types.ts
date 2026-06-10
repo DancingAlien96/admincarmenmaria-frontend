@@ -25,7 +25,7 @@ export interface AuthUser {
   permissions: Permission[];
 }
 
-export type StudentStatus = "INSCRITO" | "ACTIVO" | "EGRESADO" | "BAJA";
+export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
 
 export type DocumentType =
   | "DPI"
@@ -305,7 +305,7 @@ export interface OverviewData {
   year: number;
   students: {
     total: number;
-    byStatus: { INSCRITO: number; ACTIVO: number; EGRESADO: number; BAJA: number };
+    byStatus: { ACTIVO: number; EGRESADO: number; BAJA: number };
   };
   graduatesTotal: number;
   actasTotal: number;
@@ -318,4 +318,49 @@ export interface OverviewData {
   paymentsBySource: { source: PaymentSource; total: number; count: number }[];
   monthlyIncome: { label: string; income: number }[];
   whatsappOutbound: number;
+}
+
+// --- Catedráticos ---
+
+export type TeacherRole =
+  | "PRACTICA_HOSPITALARIA"
+  | "PRACTICA_COMUNITARIA"
+  | "TEORIA";
+
+export type TeacherDocType = "CV" | "DPI" | "TITULO" | "COLEGIADO" | "OTRO";
+
+export interface TeacherDocument {
+  id: string;
+  type: TeacherDocType;
+  fileName: string;
+  fileUrl: string;
+  fileKey: string | null;
+  createdAt: string;
+}
+
+export interface TeacherListItem {
+  id: string;
+  fullName: string;
+  dpi: string | null;
+  phone: string | null;
+  email: string | null;
+  specialty: string | null;
+  active: boolean;
+  roles: TeacherRole[];
+  _count: { documents: number };
+}
+
+export interface TeacherDetail {
+  id: string;
+  fullName: string;
+  dpi: string | null;
+  phone: string | null;
+  email: string | null;
+  title: string | null;
+  collegiate: string | null;
+  specialty: string | null;
+  notes: string | null;
+  active: boolean;
+  roles: TeacherRole[];
+  documents: TeacherDocument[];
 }

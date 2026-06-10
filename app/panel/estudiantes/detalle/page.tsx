@@ -18,7 +18,7 @@ import {
 } from "@/components/student-form";
 import { uploadFile } from "@/lib/upload";
 
-const STATUSES: StudentStatus[] = ["INSCRITO", "ACTIVO", "EGRESADO", "BAJA"];
+const STATUSES: StudentStatus[] = ["ACTIVO", "EGRESADO", "BAJA"];
 const DOC_TYPES = Object.keys(DOC_TYPE_LABELS) as DocumentType[];
 
 function toFormValues(s: StudentDetail): StudentFormValues {

@@ -7,13 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { canAccess, STATUS_LABELS, STATUS_STYLES } from "@/lib/labels";
 import type { Pagination, StudentListItem, StudentStatus } from "@/lib/types";
 
-const STATUSES: (StudentStatus | "")[] = [
-  "",
-  "INSCRITO",
-  "ACTIVO",
-  "EGRESADO",
-  "BAJA",
-];
+const STATUSES: (StudentStatus | "")[] = ["", "ACTIVO", "EGRESADO", "BAJA"];
 
 export default function StudentsPage() {
   const { user } = useAuth();
