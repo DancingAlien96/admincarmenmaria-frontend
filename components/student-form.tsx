@@ -102,12 +102,12 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
             />
           </div>
           <div>
-            <label className={labelClass}>DPI / Identificación *</label>
+            <label className={labelClass}>DPI / Identificación</label>
             <input
-              required
               className={inputClass}
               value={values.dpi}
               onChange={(e) => set("dpi", e.target.value)}
+              placeholder="Opcional"
             />
           </div>
           <div>

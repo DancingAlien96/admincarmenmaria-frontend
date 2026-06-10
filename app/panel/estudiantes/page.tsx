@@ -9,12 +9,17 @@ import type { Pagination, StudentListItem, StudentStatus } from "@/lib/types";
 
 const STATUSES: (StudentStatus | "")[] = ["", "ACTIVO", "EGRESADO", "BAJA"];
 
+// Años de inscripcion para filtrar (del actual hacia atras)
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 6 }, (_, i) => String(CURRENT_YEAR - i));
+
 export default function StudentsPage() {
   const { user } = useAuth();
   const canEdit = canAccess(user, "STUDENTS", "EDITOR");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StudentStatus | "">("");
+  const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<StudentListItem[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -26,6 +31,7 @@ export default function StudentsPage() {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (status) params.set("status", status);
+      if (year) params.set("year", year);
       params.set("page", String(page));
       const res = await api<{ data: StudentListItem[]; pagination: Pagination }>(
         `/api/students?${params.toString()}`
@@ -35,7 +41,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, status, page]);
+  }, [search, status, year, page]);
 
   useEffect(() => {
     const t = setTimeout(() => void load(), 250); // debounce de busqueda
@@ -85,6 +91,21 @@ export default function StudentsPage() {
             </option>
           ))}
         </select>
+        <select
+          value={year}
+          onChange={(e) => {
+            setYear(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+        >
+          <option value="">Todos los años</option>
+          {YEARS.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -122,7 +143,7 @@ export default function StudentsPage() {
                       {s.fullName}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{s.dpi}</td>
+                  <td className="px-4 py-3 text-gray-600">{s.dpi ?? "—"}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[s.status]}`}

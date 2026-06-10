@@ -24,7 +24,7 @@ const DOC_TYPES = Object.keys(DOC_TYPE_LABELS) as DocumentType[];
 function toFormValues(s: StudentDetail): StudentFormValues {
   return {
     fullName: s.fullName,
-    dpi: s.dpi,
+    dpi: s.dpi ?? "",
     birthDate: s.birthDate ? s.birthDate.slice(0, 10) : "",
     department: s.department ?? "",
     municipality: s.municipality ?? "",

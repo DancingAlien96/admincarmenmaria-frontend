@@ -48,7 +48,7 @@ export interface Guardian {
 export interface StudentListItem {
   id: string;
   fullName: string;
-  dpi: string;
+  dpi: string | null;
   status: StudentStatus;
   phonePrimary: string | null;
   enrollmentDate: string;
@@ -76,7 +76,7 @@ export interface StatusHistoryEntry {
 export interface StudentDetail {
   id: string;
   fullName: string;
-  dpi: string;
+  dpi: string | null;
   birthDate: string | null;
   department: string | null;
   municipality: string | null;
