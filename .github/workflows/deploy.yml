@@ -23,19 +23,27 @@ jobs:
           script: |
             set -e
             cd /opt/carmenmaria/frontend
-            echo "→ Verificando .env.local..."
-            if [ ! -f .env.local ]; then
-              echo "❌ ERROR: .env.local no existe. Copia .env.example:"
-              echo "   cp .env.example .env.local"
-              exit 1
-            fi
             echo "→ Trayendo últimos cambios de main..."
             git fetch --prune origin
             git reset --hard origin/main
+            echo "→ Generando .env.local con la URL de producción..."
+            # La URL del API se incrusta en build-time. La tomamos del secret
+            # API_URL si existe; si no, usamos el dominio de producción por defecto.
+            API_URL="${{ secrets.API_URL }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="https://admin.enfermeriacarmenmaria.edu.gt"
+            fi
+            printf 'NEXT_PUBLIC_API_URL=%s\n' "$API_URL" > .env.local
+            echo "   NEXT_PUBLIC_API_URL=$API_URL"
             echo "→ Instalando dependencias..."
             npm ci
             echo "→ Compilando build de producción..."
             npm run build
+            echo "→ Verificando que el build NO apunte a localhost..."
+            if grep -rq "localhost:4000" out/_next/static 2>/dev/null; then
+              echo "❌ ERROR: el build quedó apuntando a localhost:4000. Abortando."
+              exit 1
+            fi
             echo "→ Copiando archivos a /var/www/carmenmaria..."
             rm -rf /var/www/carmenmaria/* || true
             cp -r out/* /var/www/carmenmaria/
