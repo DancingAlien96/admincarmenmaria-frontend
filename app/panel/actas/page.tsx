@@ -55,14 +55,22 @@ export default function ActasPage() {
             {pagination?.total ?? 0} actas de calificaciones
           </p>
         </div>
-        {canEdit && (
+        <div className="flex flex-wrap gap-2">
           <Link
-            href="/panel/actas/nueva"
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            href="/panel/actas/inauguracion"
+            className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
           >
-            + Nueva acta
+            Actas de inauguración
           </Link>
-        )}
+          {canEdit && (
+            <Link
+              href="/panel/actas/nueva"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              + Nueva acta
+            </Link>
+          )}
+        </div>
       </div>
 
       <input

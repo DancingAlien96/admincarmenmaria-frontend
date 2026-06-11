@@ -364,3 +364,14 @@ export interface TeacherDetail {
   roles: TeacherRole[];
   documents: TeacherDocument[];
 }
+
+// --- Acta de Inauguración ---
+
+export interface InauguracionListItem {
+  id: string;
+  actaNumber: string;
+  promocion: string;
+  cohorte: number;
+  actoDate: string;
+  studentCount: number;
+}
