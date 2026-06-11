@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess, STATUS_LABELS, STATUS_STYLES } from "@/lib/labels";
 import type { Pagination, StudentListItem, StudentStatus } from "@/lib/types";
@@ -48,6 +48,30 @@ export default function StudentsPage() {
     return () => clearTimeout(t);
   }, [load]);
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  async function syncFromPayments() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const r = await api<{ imported: number; updated: number }>(
+        "/api/students/sync",
+        { method: "POST" }
+      );
+      setSyncMsg(
+        `Sincronización lista: ${r.imported} pagos nuevos procesados (se crearon los estudiantes de inscripción que faltaban).`
+      );
+      await load();
+    } catch (err) {
+      setSyncMsg(
+        err instanceof ApiError ? err.message : "No se pudo sincronizar."
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -58,14 +82,29 @@ export default function StudentsPage() {
           </p>
         </div>
         {canEdit && (
-          <Link
-            href="/panel/estudiantes/nuevo"
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            + Nuevo expediente
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => void syncFromPayments()}
+              disabled={syncing}
+              className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+            >
+              {syncing ? "Sincronizando…" : "Sincronizar desde pagos"}
+            </button>
+            <Link
+              href="/panel/estudiantes/nuevo"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              + Nuevo expediente
+            </Link>
+          </div>
         )}
       </div>
+
+      {syncMsg && (
+        <p className="mb-4 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
+          {syncMsg}
+        </p>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-3">
         <input
