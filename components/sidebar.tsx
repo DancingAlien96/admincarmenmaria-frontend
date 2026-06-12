@@ -61,6 +61,14 @@ export function Sidebar() {
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
+        <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logocarmenmaria.png"
+            alt="Logo Carmen María"
+            className="h-7 w-7 object-contain"
+          />
+        </span>
         <span className="text-sm font-semibold">Carmen María</span>
       </header>
 
@@ -82,9 +90,19 @@ export function Sidebar() {
         ].join(" ")}
       >
         <div className="flex items-start justify-between border-b border-white/10 px-5 py-5">
-          <div>
-            <p className="text-sm font-semibold leading-tight">Carmen María</p>
-            <p className="text-xs text-brand-100/70">Sistema Administrativo</p>
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logocarmenmaria.png"
+                alt="Logo Carmen María"
+                className="h-10 w-10 object-contain"
+              />
+            </span>
+            <div>
+              <p className="text-sm font-semibold leading-tight">Carmen María</p>
+              <p className="text-xs text-brand-100/70">Sistema Administrativo</p>
+            </div>
           </div>
           {/* Botón cerrar (solo móvil) */}
           <button
