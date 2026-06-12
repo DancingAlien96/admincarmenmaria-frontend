@@ -10,6 +10,7 @@ export interface StudentFormValues {
   department: string;
   municipality: string;
   address: string;
+  sede: string;
   phonePrimary: string;
   phoneAlt: string;
   email: string;
@@ -23,11 +24,14 @@ export const emptyStudentForm: StudentFormValues = {
   department: "",
   municipality: "",
   address: "",
+  sede: "",
   phonePrimary: "",
   phoneAlt: "",
   email: "",
   guardians: [],
 };
+
+const SEDES = ["Chiquimula", "Morales Izabal"];
 
 interface Props {
   initial?: StudentFormValues;
@@ -134,6 +138,21 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
               value={values.municipality}
               onChange={(e) => set("municipality", e.target.value)}
             />
+          </div>
+          <div>
+            <label className={labelClass}>Sede</label>
+            <input
+              className={inputClass}
+              list="sede-options"
+              value={values.sede}
+              onChange={(e) => set("sede", e.target.value)}
+              placeholder="Chiquimula / Morales Izabal"
+            />
+            <datalist id="sede-options">
+              {SEDES.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Dirección exacta</label>

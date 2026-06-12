@@ -16,6 +16,7 @@ function toPayload(v: StudentFormValues) {
     department: v.department,
     municipality: v.municipality,
     address: v.address,
+    sede: v.sede,
     phonePrimary: v.phonePrimary,
     phoneAlt: v.phoneAlt,
     email: v.email,

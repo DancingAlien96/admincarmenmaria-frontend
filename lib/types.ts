@@ -81,6 +81,7 @@ export interface StudentDetail {
   department: string | null;
   municipality: string | null;
   address: string | null;
+  sede: string | null;
   phonePrimary: string | null;
   phoneAlt: string | null;
   email: string | null;
@@ -321,6 +322,9 @@ export interface OverviewData {
   paymentsBySource: { source: PaymentSource; total: number; count: number }[];
   monthlyIncome: { label: string; income: number }[];
   whatsappOutbound: number;
+  studentsBySede: { sede: string; count: number }[];
+  enrollmentsBySede: { sede: string; count: number }[];
+  incomeBySede: { sede: string; total: number; count: number }[];
 }
 
 // --- Catedráticos ---
