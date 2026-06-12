@@ -16,6 +16,9 @@ export default function NewActaPage() {
         folios: values.folios,
         phase: values.phase,
         actaDate: values.actaDate,
+        closeDate: values.closeDate,
+        directora: values.directora,
+        secretario: values.secretario,
         entries: values.entries.map((e) => ({
           studentId: e.studentId,
           studentName: e.studentName,

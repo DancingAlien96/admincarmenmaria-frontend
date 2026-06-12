@@ -13,6 +13,9 @@ export interface ActaFormValues {
   folios: string;
   phase: string;
   actaDate: string;
+  closeDate: string;
+  directora: string;
+  secretario: string;
   entries: ActaEntry[];
 }
 
@@ -21,6 +24,9 @@ export const emptyActaForm: ActaFormValues = {
   folios: "",
   phase: "Evaluación Final Fase I",
   actaDate: new Date().toISOString().slice(0, 10),
+  closeDate: "",
+  directora: "",
+  secretario: "",
   entries: [],
 };
 
@@ -150,6 +156,36 @@ export function ActaForm({ initial, submitLabel, onSubmit }: Props) {
               value={values.actaDate}
               onChange={(e) => set("actaDate", e.target.value)}
               className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Fecha de cierre / remisión</label>
+            <input
+              type="date"
+              value={values.closeDate}
+              onChange={(e) => set("closeDate", e.target.value)}
+              className={inputClass}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Si se deja vacío, se usa la fecha del acta.
+            </p>
+          </div>
+          <div>
+            <label className={labelClass}>Directora Técnica</label>
+            <input
+              value={values.directora}
+              onChange={(e) => set("directora", e.target.value)}
+              className={inputClass}
+              placeholder="Licda. Ana Patricia Corado Arroyo"
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Secretario</label>
+            <input
+              value={values.secretario}
+              onChange={(e) => set("secretario", e.target.value)}
+              className={inputClass}
+              placeholder="Lic. Héctor Manuel Sarmiento Reyes"
             />
           </div>
         </div>

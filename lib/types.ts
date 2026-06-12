@@ -162,6 +162,9 @@ export interface ActaDetail {
   folios: string | null;
   phase: string;
   actaDate: string;
+  closeDate: string | null;
+  directora: string | null;
+  secretario: string | null;
   notes: string | null;
   sentAt: string | null;
   sentTo: string | null;

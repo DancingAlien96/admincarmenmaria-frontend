@@ -23,6 +23,9 @@ function EditActaInner() {
         folios: acta.folios ?? "",
         phase: acta.phase,
         actaDate: acta.actaDate.slice(0, 10),
+        closeDate: acta.closeDate ? acta.closeDate.slice(0, 10) : "",
+        directora: acta.directora ?? "",
+        secretario: acta.secretario ?? "",
         entries: acta.entries.map((e) => ({
           studentId: e.studentId,
           studentName: e.studentName,
@@ -46,6 +49,9 @@ function EditActaInner() {
         folios: values.folios,
         phase: values.phase,
         actaDate: values.actaDate,
+        closeDate: values.closeDate,
+        directora: values.directora,
+        secretario: values.secretario,
         entries: values.entries.map((e) => ({
           studentId: e.studentId,
           studentName: e.studentName,
