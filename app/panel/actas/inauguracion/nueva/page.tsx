@@ -77,7 +77,7 @@ export default function NewInauguracionPage() {
       });
       // Abre el PDF generado en una pestaña nueva y vuelve a la lista
       window.open(`${apiUrl}/api/inauguracion/${acta.id}/pdf`, "_blank");
-      router.replace("/panel/actas/inauguracion");
+      router.replace("/panel/actas?tab=inauguracion");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Error al crear el acta");
     } finally {
@@ -88,7 +88,7 @@ export default function NewInauguracionPage() {
   return (
     <div>
       <Link
-        href="/panel/actas/inauguracion"
+        href="/panel/actas?tab=inauguracion"
         className="text-sm text-brand-600 hover:underline"
       >
         ← Volver a actas de inauguración
