@@ -11,33 +11,58 @@ import {
 import type { DashboardData } from "@/lib/types";
 import { ExpensesPanel } from "@/components/expenses-panel";
 
-// Primer y último día del mes actual en formato YYYY-MM-DD
-function monthDefaults() {
+const MESES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+// Mes actual en formato "YYYY-MM"
+function currentMonth() {
   const now = new Date();
-  const first = new Date(now.getFullYear(), now.getMonth(), 1);
-  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  return { from: fmt(first), to: fmt(last) };
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+// Primer y último día de un mes "YYYY-MM" en formato YYYY-MM-DD (sin desfase UTC)
+function monthRange(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  const last = new Date(y, m, 0).getDate();
+  return { from: `${y}-${pad(m)}-01`, to: `${y}-${pad(m)}-${pad(last)}` };
+}
+
+// Desplaza el mes "YYYY-MM" por delta meses
+function shiftMonth(month: string, delta: number) {
+  const [y, m] = month.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+}
+
+function monthLabel(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  return `${MESES[m - 1]} ${y}`;
 }
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const defaults = monthDefaults();
-  const [from, setFrom] = useState(defaults.from);
-  const [to, setTo] = useState(defaults.to);
+  const [month, setMonth] = useState(currentMonth());
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { from, to } = monthRange(month);
+  const isCurrentOrFuture = month >= currentMonth();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ from, to });
+      const range = monthRange(month);
+      const params = new URLSearchParams(range);
       const res = await api<DashboardData>(`/api/dashboard?${params}`);
       setData(res);
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [month]);
 
   useEffect(() => {
     void load();
@@ -54,28 +79,42 @@ export default function DashboardPage() {
             Dashboard Financiero
           </h1>
           <p className="text-sm text-gray-500">
-            Hola {user?.name?.split(" ")[0]}, este es el estado financiero del
-            periodo.
+            Hola {user?.name?.split(" ")[0]}, estado financiero de{" "}
+            <span className="font-medium text-gray-700">
+              {monthLabel(month)}
+            </span>
+            .
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <div>
-            <label className="block text-xs text-gray-500">Desde</label>
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500">Hasta</label>
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
+            <label className="block text-xs text-gray-500">Mes</label>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMonth((m) => shiftMonth(m, -1))}
+                aria-label="Mes anterior"
+                className="rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                ‹
+              </button>
+              <input
+                type="month"
+                value={month}
+                max={currentMonth()}
+                onChange={(e) => e.target.value && setMonth(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={() => setMonth((m) => shiftMonth(m, 1))}
+                disabled={isCurrentOrFuture}
+                aria-label="Mes siguiente"
+                className="rounded-lg border border-gray-300 px-2.5 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+              >
+                ›
+              </button>
+            </div>
           </div>
           <a
             href={reportUrl}
@@ -113,9 +152,14 @@ export default function DashboardPage() {
               sub={`${data.kpis.expensesCount} registros`}
             />
             <Kpi
-              label="Saldo neto"
+              label={data.kpis.balance >= 0 ? "Saldo del mes" : "Déficit del mes"}
               value={formatGTQ(data.kpis.balance)}
               tone={data.kpis.balance >= 0 ? "green" : "red"}
+              sub={
+                data.kpis.balance >= 0
+                  ? "ingresos − egresos"
+                  : "egresos mayores que ingresos"
+              }
               highlight
             />
             <Kpi
