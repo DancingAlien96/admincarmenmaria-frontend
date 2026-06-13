@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess, formatGTQ } from "@/lib/labels";
+import { SedeMap } from "@/components/sede-map";
 import type { ModuleSection, OverviewData } from "@/lib/types";
 
 export default function PanelHome() {
@@ -115,8 +116,8 @@ export default function PanelHome() {
             </section>
           </div>
 
-          {/* Demografía por sede */}
-          <SedeSection data={data} />
+          {/* Demografía por sede (mapa) */}
+          <SedeMap data={data} />
 
           {/* Accesos rápidos */}
           <QuickAccess user={user} />
@@ -243,106 +244,6 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-gray-50 p-3">
       <p className="text-xs uppercase text-gray-500">{label}</p>
       <p className="mt-0.5 font-bold text-gray-800">{value}</p>
-    </div>
-  );
-}
-
-/* --- Demografía por sede --- */
-const SEDE_COLORS = [
-  "bg-brand-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-violet-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-];
-
-function SedeSection({ data }: { data: OverviewData }) {
-  const hasData =
-    data.studentsBySede.length > 0 ||
-    data.incomeBySede.length > 0 ||
-    data.enrollmentsBySede.length > 0;
-  if (!hasData) return null;
-
-  return (
-    <section className="mt-6">
-      <h2 className="mb-3 text-sm font-semibold uppercase text-gray-500">
-        Demografía por sede
-      </h2>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="mb-4 font-semibold text-brand-800">
-            Estudiantes por sede
-          </h3>
-          <SedeBars
-            rows={data.studentsBySede.map((s) => ({
-              label: s.sede,
-              value: s.count,
-              display: String(s.count),
-            }))}
-          />
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="mb-4 font-semibold text-brand-800">
-            Ingresos por sede ({data.year})
-          </h3>
-          <SedeBars
-            rows={data.incomeBySede.map((s) => ({
-              label: s.sede,
-              value: s.total,
-              display: formatGTQ(s.total),
-              hint: `${s.count} pagos`,
-            }))}
-          />
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="mb-4 font-semibold text-brand-800">
-            Inscripciones {data.year} por sede
-          </h3>
-          <SedeBars
-            rows={data.enrollmentsBySede.map((s) => ({
-              label: s.sede,
-              value: s.count,
-              display: String(s.count),
-            }))}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function SedeBars({
-  rows,
-}: {
-  rows: { label: string; value: number; display: string; hint?: string }[];
-}) {
-  if (rows.length === 0)
-    return <p className="text-sm text-gray-400">Sin datos.</p>;
-  const max = Math.max(1, ...rows.map((r) => r.value));
-  return (
-    <div className="space-y-3">
-      {rows.map((r, i) => (
-        <div key={r.label}>
-          <div className="mb-1 flex justify-between text-sm">
-            <span className="text-gray-600">
-              {r.label}
-              {r.hint && <span className="text-gray-400"> · {r.hint}</span>}
-            </span>
-            <span className="font-medium text-gray-800">{r.display}</span>
-          </div>
-          <div className="h-2 rounded-full bg-gray-100">
-            <div
-              className={`h-2 rounded-full ${
-                SEDE_COLORS[i % SEDE_COLORS.length]
-              }`}
-              style={{ width: `${Math.round((r.value / max) * 100)}%` }}
-            />
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
