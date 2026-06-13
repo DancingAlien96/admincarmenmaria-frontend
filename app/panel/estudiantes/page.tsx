@@ -83,6 +83,12 @@ export default function StudentsPage() {
         </div>
         {canEdit && (
           <div className="flex flex-wrap gap-2">
+            <Link
+              href="/panel/estudiantes/duplicados"
+              className="rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50"
+            >
+              Revisar duplicados
+            </Link>
             <button
               onClick={() => void syncFromPayments()}
               disabled={syncing}

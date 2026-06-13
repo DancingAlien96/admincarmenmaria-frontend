@@ -94,6 +94,29 @@ export interface StudentDetail {
   createdBy: { name: string } | null;
 }
 
+export interface DuplicateStudent {
+  id: string;
+  fullName: string;
+  dpi: string | null;
+  email: string | null;
+  phonePrimary: string | null;
+  sede: string | null;
+  status: StudentStatus;
+  enrollmentDate: string;
+  createdAt: string;
+  _count: {
+    payments: number;
+    documents: number;
+    charges: number;
+    guardians: number;
+  };
+}
+
+export interface DuplicateGroup {
+  key: string;
+  students: DuplicateStudent[];
+}
+
 export interface Pagination {
   page: number;
   pageSize: number;
