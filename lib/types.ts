@@ -167,6 +167,7 @@ export interface GraduateDetail extends GraduateListItem {
 export interface ActaRow {
   name: string;
   value?: string | null;
+  values?: (string | null)[];
 }
 export interface ActaSigner {
   name: string;

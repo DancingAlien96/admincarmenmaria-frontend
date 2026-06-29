@@ -6,6 +6,8 @@ import { api } from "@/lib/api";
 import { ActaForm, type ActaFormValues } from "@/components/acta-form";
 
 function toPayload(v: ActaFormValues) {
+  const usesTable = v.body.includes("{{tabla}}");
+  const noteCols = v.columns.slice(2);
   return {
     actaNumber: v.actaNumber,
     folios: v.folios,
@@ -19,8 +21,11 @@ function toPayload(v: ActaFormValues) {
     vars: Object.fromEntries(
       v.vars.filter((x) => x.key.trim()).map((x) => [x.key.trim(), x.value])
     ),
-    columns: v.body.includes("{{tabla}}") ? v.columns : v.columns.slice(0, 2),
-    rows: v.rows.map((r) => ({ name: r.name, value: r.value ?? "" })),
+    columns: usesTable ? v.columns : ["NO.", "NOMBRE DEL ALUMNO"],
+    rows: v.rows.map((r) => ({
+      name: r.name,
+      values: usesTable ? noteCols.map((_, i) => r.values[i] ?? "") : [],
+    })),
     signers: v.signers.filter((s) => s.name.trim()),
     templateId: v.templateId,
   };

@@ -23,10 +23,14 @@ function toForm(a: ActaDetail): ActaFormValues {
       a.columns && a.columns.length
         ? a.columns
         : ["NO.", "NOMBRE DEL ALUMNO", "Nota Obtenida"],
-    rows: a.rows ?? [],
+    rows: (a.rows ?? []).map((r) => ({
+      name: r.name,
+      values: (r.values ?? (r.value != null ? [r.value] : [])).map(
+        (x) => x ?? ""
+      ),
+    })),
     signers: a.signers && a.signers.length ? a.signers : [{ name: "", role: "" }],
     templateId: a.templateId ?? "",
-    hasTable: (a.body ?? "").includes("{{tabla}}"),
   };
 }
 
@@ -44,8 +48,18 @@ function toPayload(v: ActaFormValues) {
     vars: Object.fromEntries(
       v.vars.filter((x) => x.key.trim()).map((x) => [x.key.trim(), x.value])
     ),
-    columns: v.body.includes("{{tabla}}") ? v.columns : v.columns.slice(0, 2),
-    rows: v.rows.map((r) => ({ name: r.name, value: r.value ?? "" })),
+    columns: v.body.includes("{{tabla}}")
+      ? v.columns
+      : ["NO.", "NOMBRE DEL ALUMNO"],
+    rows: v.rows.map((r) => {
+      const noteCols = v.columns.slice(2);
+      return {
+        name: r.name,
+        values: v.body.includes("{{tabla}}")
+          ? noteCols.map((_, i) => r.values[i] ?? "")
+          : [],
+      };
+    }),
     signers: v.signers.filter((s) => s.name.trim()),
     templateId: v.templateId,
   };
