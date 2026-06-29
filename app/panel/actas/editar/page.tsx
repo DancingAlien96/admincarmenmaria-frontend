@@ -7,9 +7,52 @@ import { api } from "@/lib/api";
 import type { ActaDetail } from "@/lib/types";
 import { ActaForm, type ActaFormValues } from "@/components/acta-form";
 
+function toForm(a: ActaDetail): ActaFormValues {
+  return {
+    actaNumber: a.actaNumber,
+    folios: a.folios ?? "",
+    title: a.title ?? "",
+    actaDate: a.actaDate.slice(0, 16),
+    closeDate: a.closeDate ? a.closeDate.slice(0, 10) : "",
+    city: a.city ?? "Chiquimula",
+    department: a.department ?? "Chiquimula",
+    body: a.body ?? "",
+    notes: a.notes ?? "",
+    vars: Object.entries(a.vars ?? {}).map(([key, value]) => ({ key, value })),
+    columns:
+      a.columns && a.columns.length
+        ? a.columns
+        : ["NO.", "NOMBRE DEL ALUMNO", "Nota Obtenida"],
+    rows: a.rows ?? [],
+    signers: a.signers && a.signers.length ? a.signers : [{ name: "", role: "" }],
+    templateId: a.templateId ?? "",
+    hasTable: (a.body ?? "").includes("{{tabla}}"),
+  };
+}
+
+function toPayload(v: ActaFormValues) {
+  return {
+    actaNumber: v.actaNumber,
+    folios: v.folios,
+    title: v.title,
+    actaDate: v.actaDate,
+    closeDate: v.closeDate,
+    city: v.city,
+    department: v.department,
+    body: v.body,
+    notes: v.notes,
+    vars: Object.fromEntries(
+      v.vars.filter((x) => x.key.trim()).map((x) => [x.key.trim(), x.value])
+    ),
+    columns: v.body.includes("{{tabla}}") ? v.columns : v.columns.slice(0, 2),
+    rows: v.rows.map((r) => ({ name: r.name, value: r.value ?? "" })),
+    signers: v.signers.filter((s) => s.name.trim()),
+    templateId: v.templateId,
+  };
+}
+
 function EditActaInner() {
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id") ?? "";
+  const id = useSearchParams().get("id") ?? "";
   const router = useRouter();
   const [initial, setInitial] = useState<ActaFormValues | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,20 +61,7 @@ function EditActaInner() {
     setLoading(true);
     try {
       const { acta } = await api<{ acta: ActaDetail }>(`/api/actas/${id}`);
-      setInitial({
-        actaNumber: acta.actaNumber,
-        folios: acta.folios ?? "",
-        phase: acta.phase,
-        actaDate: acta.actaDate.slice(0, 10),
-        closeDate: acta.closeDate ? acta.closeDate.slice(0, 10) : "",
-        directora: acta.directora ?? "",
-        secretario: acta.secretario ?? "",
-        entries: acta.entries.map((e) => ({
-          studentId: e.studentId,
-          studentName: e.studentName,
-          score: Number(e.score),
-        })),
-      });
+      setInitial(toForm(acta));
     } finally {
       setLoading(false);
     }
@@ -42,23 +72,7 @@ function EditActaInner() {
   }, [load]);
 
   async function handleSubmit(values: ActaFormValues) {
-    await api(`/api/actas/${id}`, {
-      method: "PATCH",
-      body: {
-        actaNumber: values.actaNumber,
-        folios: values.folios,
-        phase: values.phase,
-        actaDate: values.actaDate,
-        closeDate: values.closeDate,
-        directora: values.directora,
-        secretario: values.secretario,
-        entries: values.entries.map((e) => ({
-          studentId: e.studentId,
-          studentName: e.studentName,
-          score: Number(e.score),
-        })),
-      },
-    });
+    await api(`/api/actas/${id}`, { method: "PATCH", body: toPayload(values) });
     router.replace(`/panel/actas/detalle?id=${id}`);
   }
 
@@ -66,23 +80,15 @@ function EditActaInner() {
 
   return (
     <div>
-      <Link
-        href={`/panel/actas/detalle?id=${id}`}
-        className="text-sm text-brand-600 hover:underline"
-      >
+      <Link href={`/panel/actas/detalle?id=${id}`} className="text-sm text-brand-600 hover:underline">
         ← Volver al acta
       </Link>
       <h1 className="mb-6 mt-2 text-2xl font-bold text-brand-800">Editar acta</h1>
-      <ActaForm
-        initial={initial}
-        submitLabel="Guardar cambios"
-        onSubmit={handleSubmit}
-      />
+      <ActaForm initial={initial} submitLabel="Guardar cambios" onSubmit={handleSubmit} />
     </div>
   );
 }
 
-// useSearchParams requiere un limite de Suspense en exportacion estatica.
 export default function EditActaPage() {
   return (
     <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>

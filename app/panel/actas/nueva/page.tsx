@@ -5,26 +5,34 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { ActaForm, type ActaFormValues } from "@/components/acta-form";
 
+function toPayload(v: ActaFormValues) {
+  return {
+    actaNumber: v.actaNumber,
+    folios: v.folios,
+    title: v.title,
+    actaDate: v.actaDate,
+    closeDate: v.closeDate,
+    city: v.city,
+    department: v.department,
+    body: v.body,
+    notes: v.notes,
+    vars: Object.fromEntries(
+      v.vars.filter((x) => x.key.trim()).map((x) => [x.key.trim(), x.value])
+    ),
+    columns: v.body.includes("{{tabla}}") ? v.columns : v.columns.slice(0, 2),
+    rows: v.rows.map((r) => ({ name: r.name, value: r.value ?? "" })),
+    signers: v.signers.filter((s) => s.name.trim()),
+    templateId: v.templateId,
+  };
+}
+
 export default function NewActaPage() {
   const router = useRouter();
 
   async function handleSubmit(values: ActaFormValues) {
     const { acta } = await api<{ acta: { id: string } }>("/api/actas", {
       method: "POST",
-      body: {
-        actaNumber: values.actaNumber,
-        folios: values.folios,
-        phase: values.phase,
-        actaDate: values.actaDate,
-        closeDate: values.closeDate,
-        directora: values.directora,
-        secretario: values.secretario,
-        entries: values.entries.map((e) => ({
-          studentId: e.studentId,
-          studentName: e.studentName,
-          score: Number(e.score),
-        })),
-      },
+      body: toPayload(values),
     });
     router.replace(`/panel/actas/detalle?id=${acta.id}`);
   }

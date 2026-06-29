@@ -1,22 +1,21 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { api, apiUrl, ApiError } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { api, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { ActaDetail } from "@/lib/types";
 
-function ActaDetailInner() {
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id") ?? "";
+function DetailInner() {
+  const id = useSearchParams().get("id") ?? "";
+  const router = useRouter();
   const { user } = useAuth();
   const canEdit = canAccess(user, "ACTAS", "EDITOR");
   const [acta, setActa] = useState<ActaDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [sendMsg, setSendMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,158 +31,99 @@ function ActaDetailInner() {
     void load();
   }, [load]);
 
-  async function sendToSupervisor() {
-    const to = prompt(
-      "Correo de la supervisora (deja vacío para usar el correo configurado por defecto):"
-    );
-    if (to === null) return; // canceló
-    setSending(true);
-    setSendMsg(null);
-    try {
-      const body = to.trim() ? { to: to.trim() } : {};
-      const res = await api<{ sentTo: string }>(`/api/actas/${id}/send`, {
-        method: "POST",
-        body,
-      });
-      setSendMsg(`Acta enviada a ${res.sentTo}.`);
-      await load();
-    } catch (err) {
-      setSendMsg(
-        err instanceof ApiError ? err.message : "No se pudo enviar el acta."
-      );
-    } finally {
-      setSending(false);
-    }
+  async function remove() {
+    if (!confirm("¿Eliminar esta acta?")) return;
+    await api(`/api/actas/${id}`, { method: "DELETE" });
+    router.replace("/panel/actas");
   }
 
-  if (loading) return <p className="text-gray-400">Cargando…</p>;
-  if (!acta) return <p className="text-gray-500">Acta no encontrada.</p>;
-
-  const avg =
-    acta.entries.length > 0
-      ? (
-          acta.entries.reduce((s, e) => s + Number(e.score), 0) /
-          acta.entries.length
-        ).toFixed(2)
-      : "—";
+  if (loading || !acta) return <p className="text-gray-400">Cargando…</p>;
 
   return (
     <div>
       <Link href="/panel/actas" className="text-sm text-brand-600 hover:underline">
         ← Volver a actas
       </Link>
-
-      <div className="mb-6 mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-6 mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-brand-800">
             Acta {acta.actaNumber}
           </h1>
-          <p className="text-sm text-gray-500">{acta.phase}</p>
+          <p className="text-sm text-gray-500">
+            {acta.title ?? "—"} · {acta.actaDate.slice(0, 10)}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href={`/panel/actas/editar?id=${acta.id}`}
-            className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
-          >
-            Editar
-          </Link>
+        <div className="flex flex-wrap gap-2">
           <a
             href={`${apiUrl}/api/actas/${acta.id}/pdf`}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
-            Descargar PDF
+            Ver PDF
           </a>
           {canEdit && (
-            <button
-              onClick={() => void sendToSupervisor()}
-              disabled={sending}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {sending ? "Enviando…" : "Enviar a supervisora"}
-            </button>
+            <>
+              <Link
+                href={`/panel/actas/editar?id=${acta.id}`}
+                className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+              >
+                Editar
+              </Link>
+              <button
+                onClick={() => void remove()}
+                className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+              >
+                Eliminar
+              </button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Estado de envío */}
-      {acta.sentAt ? (
-        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          Enviada a {acta.sentTo} el{" "}
-          {new Date(acta.sentAt).toLocaleString("es-GT")}.
-        </div>
-      ) : (
-        <div className="mb-6 rounded-lg border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Esta acta aún no ha sido enviada. Requiere configurar el correo emisor
-          (SMTP) en el servidor.
-        </div>
-      )}
-      {sendMsg && (
-        <div className="mb-6 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-700">
-          {sendMsg}
-        </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-1">
-          <h2 className="mb-4 font-semibold text-brand-800">Datos del acta</h2>
-          <dl className="space-y-3">
-            <Field label="No. de acta" value={acta.actaNumber} />
-            <Field label="No. de folios" value={acta.folios} />
-            <Field label="Fase" value={acta.phase} />
-            <Field label="Fecha" value={acta.actaDate.slice(0, 10)} />
-            <Field label="Promedio del grupo" value={avg} />
-            {acta.createdBy && (
-              <Field label="Creada por" value={acta.createdBy.name} />
-            )}
-          </dl>
-        </section>
-
-        <section className="rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
-          <h2 className="mb-4 font-semibold text-brand-800">
-            Punteos ({acta.entries.length})
-          </h2>
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase text-gray-500">
-              <tr>
-                <th className="px-3 py-2 w-10">#</th>
-                <th className="px-3 py-2">Estudiante</th>
-                <th className="px-3 py-2 text-right">Punteo</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {acta.entries.map((e, i) => (
-                <tr key={e.id ?? i}>
-                  <td className="px-3 py-2 text-gray-500">{i + 1}</td>
-                  <td className="px-3 py-2 text-gray-800">{e.studentName}</td>
-                  <td className="px-3 py-2 text-right font-medium text-gray-800">
-                    {Number(e.score).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Info label="Folios" value={acta.folios ?? "—"} />
+        <Info label="Ciudad" value={acta.city} />
+        <Info label="Cierre" value={acta.closeDate ? acta.closeDate.slice(0, 10) : "—"} />
+        <Info label="Alumnos" value={String(acta.rows?.length ?? 0)} />
       </div>
+
+      <section className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-3 font-semibold text-brand-800">Cuerpo del acta</h2>
+        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700">
+          {acta.body}
+        </pre>
+      </section>
+
+      {acta.signers && acta.signers.length > 0 && (
+        <section className="mt-4 rounded-xl border border-gray-200 bg-white p-5">
+          <h2 className="mb-3 font-semibold text-brand-800">Firmantes</h2>
+          <ul className="space-y-1 text-sm text-gray-700">
+            {acta.signers.map((s, i) => (
+              <li key={i}>
+                <span className="font-medium">{s.name}</span> — {s.role}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
 
-// useSearchParams requiere un limite de Suspense en exportacion estatica.
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <p className="text-xs uppercase text-gray-500">{label}</p>
+      <p className="mt-1 font-semibold text-gray-800">{value}</p>
+    </div>
+  );
+}
+
 export default function ActaDetailPage() {
   return (
     <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
-      <ActaDetailInner />
+      <DetailInner />
     </Suspense>
-  );
-}
-
-function Field({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div>
-      <dt className="text-xs uppercase text-gray-400">{label}</dt>
-      <dd className="text-sm text-gray-800">{value || "—"}</dd>
-    </div>
   );
 }

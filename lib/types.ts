@@ -164,36 +164,54 @@ export interface GraduateDetail extends GraduateListItem {
 
 // --- Módulo 6: Actas de calificaciones ---
 
-export interface ActaEntry {
-  id?: string;
-  studentId: string | null;
-  studentName: string;
-  score: number;
+export interface ActaRow {
+  name: string;
+  value?: string | null;
+}
+export interface ActaSigner {
+  name: string;
+  role: string;
 }
 
 export interface ActaListItem {
   id: string;
   actaNumber: string;
+  title: string | null;
   folios: string | null;
-  phase: string;
   actaDate: string;
-  _count: { entries: number };
+  rowCount: number;
 }
 
 export interface ActaDetail {
   id: string;
   actaNumber: string;
   folios: string | null;
-  phase: string;
+  title: string | null;
   actaDate: string;
   closeDate: string | null;
-  directora: string | null;
-  secretario: string | null;
+  city: string;
+  department: string;
+  body: string;
+  vars: Record<string, string> | null;
+  columns: string[] | null;
+  rows: ActaRow[] | null;
+  signers: ActaSigner[] | null;
   notes: string | null;
+  templateId: string | null;
   sentAt: string | null;
   sentTo: string | null;
-  entries: ActaEntry[];
   createdBy: { name: string } | null;
+}
+
+export interface ActaTemplate {
+  id: string;
+  name: string;
+  title: string | null;
+  body: string;
+  columns: string[] | null;
+  signers: ActaSigner[] | null;
+  vars: Record<string, string> | null;
+  block: string | null;
 }
 
 // --- Módulo 2: Pagos ---
@@ -395,13 +413,3 @@ export interface TeacherDetail {
   documents: TeacherDocument[];
 }
 
-// --- Acta de Inauguración ---
-
-export interface InauguracionListItem {
-  id: string;
-  actaNumber: string;
-  promocion: string;
-  cohorte: number;
-  actoDate: string;
-  studentCount: number;
-}
