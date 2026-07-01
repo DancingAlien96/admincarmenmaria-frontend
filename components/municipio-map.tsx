@@ -40,8 +40,20 @@ export function MunicipioMap({ data }: { data: OverviewData }) {
         maxZoom: 18,
       }).addTo(map);
 
+      // Escapa los campos de texto (los ingresa el personal) antes de
+      // inyectarlos en el HTML del popup/tooltip de Leaflet.
+      const esc = (s: string) =>
+        s
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+
       for (const m of located) {
         const r = 8 + (Math.sqrt(m.count) / Math.sqrt(max)) * 22;
+        const muni = esc(m.municipality);
+        const dep = esc(m.department);
         L.circleMarker([m.lat, m.lng], {
           radius: r,
           color: "#16314f",
@@ -51,9 +63,9 @@ export function MunicipioMap({ data }: { data: OverviewData }) {
         })
           .addTo(map!)
           .bindPopup(
-            `<strong>${m.municipality}</strong><br/>${m.department}<br/>${m.count} estudiante${m.count === 1 ? "" : "s"}`
+            `<strong>${muni}</strong><br/>${dep}<br/>${m.count} estudiante${m.count === 1 ? "" : "s"}`
           )
-          .bindTooltip(`${m.municipality}: ${m.count}`);
+          .bindTooltip(`${muni}: ${m.count}`);
       }
 
       // Ajusta el encuadre a las burbujas si hay datos.
