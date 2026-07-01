@@ -397,6 +397,12 @@ export interface OverviewData {
   studentsBySede: { sede: string; count: number }[];
   enrollmentsBySede: { sede: string; count: number }[];
   incomeBySede: { sede: string; total: number; count: number }[];
+  studentsByMunicipality: {
+    department: string;
+    municipality: string;
+    count: number;
+  }[];
+  studentsWithoutLocation: number;
 }
 
 // --- Catedráticos ---

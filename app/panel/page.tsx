@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess, formatGTQ } from "@/lib/labels";
-import { SedeMap } from "@/components/sede-map";
+import { MunicipioMap } from "@/components/municipio-map";
 import type { ModuleSection, OverviewData } from "@/lib/types";
 
 export default function PanelHome() {
@@ -116,8 +116,8 @@ export default function PanelHome() {
             </section>
           </div>
 
-          {/* Demografía por sede (mapa) */}
-          <SedeMap data={data} />
+          {/* Mapa de estudiantes por municipio (GPS) */}
+          <MunicipioMap data={data} />
 
           {/* Accesos rápidos */}
           <QuickAccess user={user} />
