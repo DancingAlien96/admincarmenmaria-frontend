@@ -106,13 +106,21 @@ export function ActaForm({ initial, submitLabel, onSubmit }: Props) {
       set("templateId", "");
       return;
     }
+    // Cruza los firmantes de la plantilla con el catálogo para traer su firma.
+    const norm = (s: string) => s.trim().toLowerCase();
+    const baseSigners: ActaSigner[] =
+      t.signers && t.signers.length ? t.signers : v.signers;
+    const signers = baseSigners.map((sg) => {
+      const match = signatories.find((x) => norm(x.name) === norm(sg.name));
+      return match ? { ...sg, signatureKey: match.signatureKey } : sg;
+    });
     setV((p) => ({
       ...p,
       templateId: id,
       title: t.title ?? p.title,
       body: t.body,
       columns: t.columns && t.columns.length ? t.columns : p.columns,
-      signers: t.signers && t.signers.length ? t.signers : p.signers,
+      signers,
       vars: Object.entries(t.vars ?? {}).map(([key, value]) => ({ key, value })),
       rows: [],
     }));
