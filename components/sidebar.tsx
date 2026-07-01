@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: "/panel/pagos", label: "Control de Pagos", section: "PAYMENTS", ready: true },
   { href: "/panel/recordatorios", label: "Recordatorios", section: "REMINDERS", ready: true },
   { href: "/panel/dashboard", label: "Dashboard Financiero", section: "DASHBOARD", ready: true },
+  { href: "/panel/reportes", label: "Reportes", section: "DASHBOARD", ready: true },
   { href: "/panel/diplomas", label: "Banca de Diplomas", section: "DIPLOMAS", ready: true },
   { href: "/panel/actas", label: "Gestión de Actas", section: "ACTAS", ready: true },
 ];

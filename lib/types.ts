@@ -117,6 +117,24 @@ export interface DuplicateGroup {
   students: DuplicateStudent[];
 }
 
+export interface ReportKpi {
+  label: string;
+  value: string;
+}
+export interface ReportTable {
+  title?: string;
+  columns: string[];
+  rows: (string | number)[][];
+  totals?: (string | number)[];
+}
+export interface ReportData {
+  title: string;
+  subtitle?: string;
+  periodLabel?: string;
+  kpis?: ReportKpi[];
+  tables: ReportTable[];
+}
+
 export interface Pagination {
   page: number;
   pageSize: number;
