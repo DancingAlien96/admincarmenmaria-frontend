@@ -172,6 +172,18 @@ export interface ActaRow {
 export interface ActaSigner {
   name: string;
   role: string;
+  signatureKey?: string | null;
+}
+
+export interface Signatory {
+  id: string;
+  name: string;
+  role: string;
+  sede: string | null;
+  signatureKey: string;
+  signatureUrl: string;
+  active: boolean;
+  createdAt: string;
 }
 
 export interface ActaListItem {

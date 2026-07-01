@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api";
-import type { ActaSigner, ActaTemplate, StudentListItem } from "@/lib/types";
+import type {
+  ActaSigner,
+  ActaTemplate,
+  Signatory,
+  StudentListItem,
+} from "@/lib/types";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
@@ -71,6 +76,7 @@ export function ActaForm({ initial, submitLabel, onSubmit }: Props) {
   const [v, setV] = useState<ActaFormValues>(initial ?? emptyActaForm);
   const [templates, setTemplates] = useState<ActaTemplate[]>([]);
   const [students, setStudents] = useState<StudentListItem[]>([]);
+  const [signatories, setSignatories] = useState<Signatory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -81,6 +87,9 @@ export function ActaForm({ initial, submitLabel, onSubmit }: Props) {
     void api<{ data: StudentListItem[] }>(
       "/api/students?status=ACTIVO&pageSize=100"
     ).then((r) => setStudents(r.data));
+    void api<{ signatories: Signatory[] }>("/api/signatories")
+      .then((r) => setSignatories(r.signatories))
+      .catch(() => setSignatories([])); // solo admin puede listarlas
   }, []);
 
   function set<K extends keyof ActaFormValues>(k: K, val: ActaFormValues[K]) {
@@ -331,12 +340,42 @@ export function ActaForm({ initial, submitLabel, onSubmit }: Props) {
           <h2 className="font-semibold text-brand-800">Firmantes</h2>
           <button type="button" onClick={() => set("signers", [...v.signers, { name: "", role: "" }])} className="rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-100">+ Agregar</button>
         </div>
-        <p className="mb-3 text-xs text-gray-500">El primero lleva la firma; el sello va a la derecha. Los demás aparecen como “Vo.Bo.”.</p>
+        <p className="mb-3 text-xs text-gray-500">El primero lleva la firma; el sello va a la derecha. Los demás aparecen como “Vo.Bo.”. Cada firmante estampa su firma registrada.</p>
+
+        {signatories.length > 0 && (
+          <div className="mb-3">
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                const sig = signatories.find((x) => x.id === e.target.value);
+                if (sig)
+                  set("signers", [
+                    ...v.signers.filter((s) => s.name.trim()),
+                    { name: sig.name, role: sig.role, signatureKey: sig.signatureKey },
+                  ]);
+                e.target.value = "";
+              }}
+              className={inputClass}
+            >
+              <option value="">+ Agregar firmante del catálogo…</option>
+              {signatories.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} — {s.role}
+                  {s.sede ? ` (${s.sede})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="space-y-2">
           {v.signers.map((s, i) => (
-            <div key={i} className="flex gap-2">
+            <div key={i} className="flex items-center gap-2">
               <input value={s.name} onChange={(e) => set("signers", v.signers.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={inputClass} placeholder="Nombre" />
               <input value={s.role} onChange={(e) => set("signers", v.signers.map((x, j) => j === i ? { ...x, role: e.target.value } : x))} className={`${inputClass} w-48`} placeholder="Cargo" />
+              <span className="shrink-0 text-xs" title={s.signatureKey ? "Con firma registrada" : "Sin firma (solo texto)"}>
+                {s.signatureKey ? "✍️" : "—"}
+              </span>
               <button type="button" onClick={() => set("signers", v.signers.filter((_, j) => j !== i))} className="shrink-0 text-xs text-red-600 hover:underline">Quitar</button>
             </div>
           ))}
