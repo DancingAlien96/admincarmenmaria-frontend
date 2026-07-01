@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api, apiUrl, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { Signatory } from "@/lib/types";
 
 const inputClass =
@@ -10,6 +12,7 @@ const inputClass =
 const SEDES = ["", "Chiquimula", "Morales Izabal"];
 
 export default function FirmasPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState<Signatory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,9 +99,25 @@ export default function FirmasPage() {
     }
   }
 
+  if (user && user.role !== "ADMIN") {
+    return (
+      <div>
+        <Link href="/panel/actas" className="text-sm text-brand-600 hover:underline">
+          ← Volver a actas
+        </Link>
+        <p className="mt-4 text-gray-500">
+          Esta sección es solo para administradores.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold text-brand-800">
+      <Link href="/panel/actas" className="text-sm text-brand-600 hover:underline">
+        ← Volver a actas
+      </Link>
+      <h1 className="mb-1 mt-2 text-2xl font-bold text-brand-800">
         Firmas del personal
       </h1>
       <p className="mb-6 text-sm text-gray-500">

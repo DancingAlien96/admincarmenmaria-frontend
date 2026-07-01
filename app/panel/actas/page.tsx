@@ -53,6 +53,14 @@ export default function ActasPage() {
         </div>
         {canEdit && (
           <div className="flex flex-wrap gap-2">
+            {user?.role === "ADMIN" && (
+              <Link
+                href="/panel/actas/firmas"
+                className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+              >
+                Firmas
+              </Link>
+            )}
             <Link
               href="/panel/actas/plantillas"
               className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"

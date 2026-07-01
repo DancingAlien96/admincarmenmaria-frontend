@@ -164,17 +164,6 @@ export function Sidebar() {
                 Catedráticos
               </Link>
               <Link
-                href="/panel/firmas"
-                className={[
-                  "flex items-center rounded-lg px-3 py-2 text-sm transition",
-                  pathname.startsWith("/panel/firmas")
-                    ? "bg-white/15 font-medium"
-                    : "text-brand-100/80 hover:bg-white/10",
-                ].join(" ")}
-              >
-                Firmas del personal
-              </Link>
-              <Link
                 href="/panel/usuarios"
                 className={[
                   "flex items-center rounded-lg px-3 py-2 text-sm transition",
