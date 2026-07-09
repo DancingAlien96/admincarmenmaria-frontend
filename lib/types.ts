@@ -118,6 +118,24 @@ export interface DuplicateGroup {
   students: DuplicateStudent[];
 }
 
+export interface LinkSuggestion {
+  studentId: string;
+  fullName: string;
+  sede: string | null;
+  score: number;
+}
+export interface LinkSuggestionGroup {
+  key: string;
+  payerName: string;
+  payerEmail: string | null;
+  count: number;
+  totalAmount: number;
+  paymentIds: string[];
+  concepts: string[];
+  best: LinkSuggestion | null;
+  alternatives: LinkSuggestion[];
+}
+
 export interface MonthlyPaymentStatus {
   month: string;
   label: string;

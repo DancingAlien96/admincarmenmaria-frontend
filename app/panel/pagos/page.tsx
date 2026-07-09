@@ -120,6 +120,12 @@ export default function PaymentsPage() {
           </Link>
           {canEdit && (
             <>
+              <Link
+                href="/panel/pagos/vincular"
+                className="rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50"
+              >
+                Vincular pagos
+              </Link>
               <button
                 onClick={() => void sync()}
                 disabled={syncing}
