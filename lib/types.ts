@@ -50,6 +50,7 @@ export interface StudentListItem {
   fullName: string;
   dpi: string | null;
   status: StudentStatus;
+  sede: string | null;
   phonePrimary: string | null;
   enrollmentDate: string;
   _count: { documents: number };

@@ -19,6 +19,7 @@ export default function StudentsPage() {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StudentStatus | "">("");
+  const [sede, setSede] = useState("");
   const [year, setYear] = useState("");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<StudentListItem[]>([]);
@@ -31,6 +32,7 @@ export default function StudentsPage() {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (status) params.set("status", status);
+      if (sede) params.set("sede", sede);
       if (year) params.set("year", year);
       params.set("page", String(page));
       const res = await api<{ data: StudentListItem[]; pagination: Pagination }>(
@@ -41,7 +43,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, status, year, page]);
+  }, [search, status, sede, year, page]);
 
   useEffect(() => {
     const t = setTimeout(() => void load(), 250); // debounce de busqueda
@@ -137,6 +139,18 @@ export default function StudentsPage() {
           ))}
         </select>
         <select
+          value={sede}
+          onChange={(e) => {
+            setSede(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+        >
+          <option value="">Todas las sedes</option>
+          <option value="Chiquimula">Chiquimula</option>
+          <option value="Morales Izabal">Morales Izabal</option>
+        </select>
+        <select
           value={year}
           onChange={(e) => {
             setYear(e.target.value);
@@ -160,6 +174,7 @@ export default function StudentsPage() {
               <th className="px-4 py-3">Nombre</th>
               <th className="px-4 py-3">DPI</th>
               <th className="px-4 py-3">Estado</th>
+              <th className="px-4 py-3">Sede</th>
               <th className="px-4 py-3">Teléfono</th>
               <th className="px-4 py-3">Docs</th>
             </tr>
@@ -167,13 +182,13 @@ export default function StudentsPage() {
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                   Cargando…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                   No hay expedientes que coincidan.
                 </td>
               </tr>
@@ -196,6 +211,7 @@ export default function StudentsPage() {
                       {STATUS_LABELS[s.status]}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-gray-600">{s.sede ?? "—"}</td>
                   <td className="px-4 py-3 text-gray-600">
                     {s.phonePrimary ?? "—"}
                   </td>
