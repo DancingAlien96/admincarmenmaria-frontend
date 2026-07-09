@@ -117,6 +117,14 @@ export interface DuplicateGroup {
   students: DuplicateStudent[];
 }
 
+export interface MonthlyPaymentStatus {
+  month: string;
+  label: string;
+  total: number;
+  paid: number;
+  pending: number;
+}
+
 export interface ReportKpi {
   label: string;
   value: string;

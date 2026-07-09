@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { canAccess, formatGTQ } from "@/lib/labels";
+import { formatGTQ } from "@/lib/labels";
 import { MunicipioMap } from "@/components/municipio-map";
-import type { ModuleSection, OverviewData } from "@/lib/types";
+import { PaymentDonut } from "@/components/payment-donut";
+import type { OverviewData } from "@/lib/types";
 
 export default function PanelHome() {
   const { user } = useAuth();
@@ -116,11 +116,11 @@ export default function PanelHome() {
             </section>
           </div>
 
+          {/* Pagos puntuales vs mora (mensualidad del mes) */}
+          <PaymentDonut />
+
           {/* Mapa de estudiantes por municipio (GPS) */}
           <MunicipioMap data={data} />
-
-          {/* Accesos rápidos */}
-          <QuickAccess user={user} />
         </>
       )}
     </div>
@@ -248,34 +248,3 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-const QUICK: { href: string; title: string; section: ModuleSection }[] = [
-  { href: "/panel/estudiantes", title: "Expedientes", section: "STUDENTS" },
-  { href: "/panel/pagos", title: "Control de Pagos", section: "PAYMENTS" },
-  { href: "/panel/recordatorios", title: "Recordatorios", section: "REMINDERS" },
-  { href: "/panel/dashboard", title: "Dashboard Financiero", section: "DASHBOARD" },
-  { href: "/panel/diplomas", title: "Banca de Diplomas", section: "DIPLOMAS" },
-  { href: "/panel/actas", title: "Gestión de Actas", section: "ACTAS" },
-];
-
-function QuickAccess({ user }: { user: ReturnType<typeof useAuth>["user"] }) {
-  const items = QUICK.filter((q) => canAccess(user, q.section));
-  if (items.length === 0) return null;
-  return (
-    <section className="mt-6">
-      <h2 className="mb-3 text-sm font-semibold uppercase text-gray-500">
-        Accesos rápidos
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {items.map((q) => (
-          <Link
-            key={q.href}
-            href={q.href}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-brand-700 hover:border-brand-300 hover:bg-brand-50"
-          >
-            {q.title}
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
