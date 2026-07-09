@@ -56,10 +56,10 @@ export default function PanelHome() {
               tone="green"
             />
             <Kpi
-              label="Mora acumulada"
-              value={formatGTQ(data.finance.moraTotal)}
-              sub={data.finance.moraTotal > 0 ? "pendiente de cobro" : "al día"}
-              tone={data.finance.moraTotal > 0 ? "red" : "green"}
+              label="Estudiantes en mora"
+              value={String(data.finance.moraCount)}
+              sub={`sin mensualidad de ${data.finance.moraLabel}`}
+              tone={data.finance.moraCount > 0 ? "red" : "green"}
             />
           </div>
 

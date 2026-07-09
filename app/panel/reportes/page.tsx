@@ -12,7 +12,7 @@ type ReportType =
   | "egresados"
   | "sedes";
 
-type FilterKey = "period" | "sede" | "status" | "year";
+type FilterKey = "period" | "sede" | "status" | "year" | "month";
 
 const REPORTS: {
   key: ReportType;
@@ -22,7 +22,7 @@ const REPORTS: {
 }[] = [
   { key: "resumen", title: "Resumen Ejecutivo", desc: "Panorama general del periodo", filters: ["period"] },
   { key: "cobranza", title: "Cobranza / Ingresos por mes", desc: "Cobrado vs esperado y tendencia", filters: ["period"] },
-  { key: "mora", title: "Estudiantes en mora", desc: "Cuotas pendientes vencidas", filters: ["sede"] },
+  { key: "mora", title: "Estudiantes en mora", desc: "Sin mensualidad del mes", filters: ["month", "sede"] },
   { key: "estudiantes", title: "Listado de estudiantes", desc: "Expedientes por sede, estado y año", filters: ["sede", "status", "year"] },
   { key: "egresados", title: "Egresados / Diplomas", desc: "Listado de egresados por año", filters: ["year"] },
   { key: "sedes", title: "Reporte por sede", desc: "Comparativo Chiquimula vs Izabal", filters: ["period"] },
@@ -38,6 +38,10 @@ function monthStart() {
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
+function currentMonth() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+}
 
 export default function ReportesPage() {
   const [type, setType] = useState<ReportType>("resumen");
@@ -46,6 +50,7 @@ export default function ReportesPage() {
   const [sede, setSede] = useState("");
   const [status, setStatus] = useState("");
   const [year, setYear] = useState("");
+  const [month, setMonth] = useState(currentMonth());
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -60,8 +65,9 @@ export default function ReportesPage() {
     if (current.filters.includes("sede") && sede) p.set("sede", sede);
     if (current.filters.includes("status") && status) p.set("status", status);
     if (current.filters.includes("year") && year) p.set("year", year);
+    if (current.filters.includes("month") && month) p.set("month", month);
     return p.toString();
-  }, [type, from, to, sede, status, year, current]);
+  }, [type, from, to, sede, status, year, month, current]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,6 +137,18 @@ export default function ReportesPage() {
                     <label className="mb-1 block text-xs text-gray-500">Hasta</label>
                     <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputClass} />
                   </div>
+                </div>
+              )}
+              {current.filters.includes("month") && (
+                <div>
+                  <label className="mb-1 block text-xs text-gray-500">Mes</label>
+                  <input
+                    type="month"
+                    value={month}
+                    max={currentMonth()}
+                    onChange={(e) => e.target.value && setMonth(e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
               )}
               {current.filters.includes("sede") && (

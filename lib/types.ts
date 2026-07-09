@@ -397,7 +397,8 @@ export interface OverviewData {
     incomeYear: number;
     expenseYear: number;
     balanceYear: number;
-    moraTotal: number;
+    moraCount: number;
+    moraLabel: string;
   };
   paymentsBySource: { source: PaymentSource; total: number; count: number }[];
   monthlyIncome: { label: string; income: number }[];
