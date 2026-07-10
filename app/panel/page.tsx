@@ -120,7 +120,7 @@ export default function PanelHome() {
           <PaymentDonut />
 
           {/* Mapa de estudiantes por municipio (GPS) */}
-          <MunicipioMap data={data} />
+          <MunicipioMap />
         </>
       )}
     </div>

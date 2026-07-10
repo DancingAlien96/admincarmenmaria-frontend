@@ -137,6 +137,17 @@ export interface LinkSuggestionGroup {
   alternatives: LinkSuggestion[];
 }
 
+export interface MunicipalityMapData {
+  year: number;
+  total: number;
+  studentsByMunicipality: {
+    department: string;
+    municipality: string;
+    count: number;
+  }[];
+  studentsWithoutLocation: number;
+}
+
 export interface MonthlyPaymentStatus {
   month: string;
   label: string;
