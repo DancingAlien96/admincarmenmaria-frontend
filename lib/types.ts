@@ -48,6 +48,7 @@ export interface Guardian {
 export interface StudentListItem {
   id: string;
   fullName: string;
+  sortName?: string; // "Apellidos Nombres" para mostrar en la lista
   dpi: string | null;
   status: StudentStatus;
   sede: string | null;

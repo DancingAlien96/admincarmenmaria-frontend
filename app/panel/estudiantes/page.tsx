@@ -200,7 +200,7 @@ export default function StudentsPage() {
                       href={`/panel/estudiantes/detalle?id=${s.id}`}
                       className="font-medium text-brand-700 hover:underline"
                     >
-                      {s.fullName}
+                      {s.sortName ?? s.fullName}
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-gray-600">{s.dpi ?? "—"}</td>
