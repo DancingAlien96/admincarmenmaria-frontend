@@ -52,6 +52,26 @@ export default function StudentsPage() {
 
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
+
+  async function generarLinkInscripcion() {
+    setInviting(true);
+    setInviteLink(null);
+    try {
+      const r = await api<{ token: string }>("/api/portal-invites", {
+        method: "POST",
+        body: {},
+      });
+      setInviteLink(`${window.location.origin}/inscripcion/?token=${r.token}`);
+    } catch (err) {
+      setSyncMsg(
+        err instanceof ApiError ? err.message : "No se pudo generar el link."
+      );
+    } finally {
+      setInviting(false);
+    }
+  }
 
   async function syncFromPayments() {
     setSyncing(true);
@@ -85,6 +105,15 @@ export default function StudentsPage() {
         </div>
         {canEdit && (
           <div className="flex flex-wrap gap-2">
+            {user?.role === "ADMIN" && (
+              <button
+                onClick={() => void generarLinkInscripcion()}
+                disabled={inviting}
+                className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+              >
+                {inviting ? "Generando…" : "Link de inscripción"}
+              </button>
+            )}
             <Link
               href="/panel/estudiantes/duplicados"
               className="rounded-lg border border-amber-300 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50"
@@ -112,6 +141,31 @@ export default function StudentsPage() {
         <p className="mb-4 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
           {syncMsg}
         </p>
+      )}
+
+      {inviteLink && (
+        <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm">
+          <p className="mb-1 font-medium text-brand-800">
+            Link de inscripción generado — compártelo con el aspirante:
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="flex-1 break-all rounded bg-white px-2 py-1 text-xs text-gray-700">
+              {inviteLink}
+            </code>
+            <button
+              onClick={() => void navigator.clipboard.writeText(inviteLink)}
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+            >
+              Copiar
+            </button>
+            <button
+              onClick={() => setInviteLink(null)}
+              className="text-xs text-gray-500 hover:underline"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="mb-4 flex flex-wrap gap-3">

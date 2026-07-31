@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import {
   canAccess,
@@ -51,6 +51,24 @@ function StudentDetailInner() {
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
+  const [portalLink, setPortalLink] = useState<string | null>(null);
+  const [portalBusy, setPortalBusy] = useState(false);
+
+  async function crearAccesoPortal() {
+    setPortalBusy(true);
+    setPortalLink(null);
+    try {
+      const r = await api<{ token: string }>("/api/portal-invites", {
+        method: "POST",
+        body: { studentId: id },
+      });
+      setPortalLink(`${window.location.origin}/inscripcion/?token=${r.token}`);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo generar el acceso");
+    } finally {
+      setPortalBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -117,14 +135,47 @@ function StudentDetailInner() {
           </span>
         </div>
         {canEdit && !editing && (
-          <button
-            onClick={() => setEditing(true)}
-            className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
-          >
-            Editar datos
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {user?.role === "ADMIN" && (
+              <button
+                onClick={() => void crearAccesoPortal()}
+                disabled={portalBusy}
+                className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+              >
+                {portalBusy ? "Generando…" : "Generar acceso al portal"}
+              </button>
+            )}
+            <button
+              onClick={() => setEditing(true)}
+              className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+            >
+              Editar datos
+            </button>
+          </div>
         )}
       </div>
+
+      {portalLink && (
+        <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm">
+          <p className="mb-1 font-medium text-brand-800">
+            Link de activación — envíaselo al estudiante para que cree su contraseña:
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="flex-1 break-all rounded bg-white px-2 py-1 text-xs text-gray-700">
+              {portalLink}
+            </code>
+            <button
+              onClick={() => void navigator.clipboard.writeText(portalLink)}
+              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+            >
+              Copiar
+            </button>
+            <button onClick={() => setPortalLink(null)} className="text-xs text-gray-500 hover:underline">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
 
       {editing ? (
         <div>

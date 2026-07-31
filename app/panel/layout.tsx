@@ -14,10 +14,13 @@ export default function PanelLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
+    if (loading) return;
+    if (!user) router.replace("/login");
+    // Un estudiante no accede al panel administrativo; va a su portal.
+    else if (user.role === "ESTUDIANTE") router.replace("/portal");
   }, [user, loading, router]);
 
-  if (loading || !user) {
+  if (loading || !user || user.role === "ESTUDIANTE") {
     return (
       <div className="flex min-h-screen items-center justify-center text-brand-700">
         Cargando…

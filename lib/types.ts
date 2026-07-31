@@ -9,7 +9,7 @@ export type ModuleSection =
   | "ACTAS";
 
 export type PermissionLevel = "READER" | "EDITOR";
-export type UserRole = "ADMIN" | "STAFF";
+export type UserRole = "ADMIN" | "STAFF" | "DOCENTE" | "ESTUDIANTE";
 
 export interface Permission {
   section: ModuleSection;
@@ -22,7 +22,35 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   active: boolean;
+  studentId?: string | null;
   permissions: Permission[];
+}
+
+// --- Portal del alumno ---
+export interface PortalDashboard {
+  student: {
+    id: string;
+    expedienteNumber: string | null;
+    fullName: string;
+    sede: string | null;
+    status: StudentStatus;
+    enrollmentDate: string;
+    email: string | null;
+    phonePrimary: string | null;
+  };
+  pagosRealizados: number;
+  totalPagado: number;
+  mensualidadPagada: boolean;
+  mesActual: string;
+  documentos: number;
+  payments: {
+    id: string;
+    concept: string;
+    amount: number;
+    paidAt: string;
+    method: string;
+  }[];
+  grades: { acta: string; fase: string; date: string; nota: string }[];
 }
 
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";

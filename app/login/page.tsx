@@ -13,8 +13,11 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Cada rol va a su lugar: los estudiantes al portal, el resto al panel.
   useEffect(() => {
-    if (!loading && user) router.replace("/panel");
+    if (!loading && user) {
+      router.replace(user.role === "ESTUDIANTE" ? "/portal" : "/panel");
+    }
   }, [user, loading, router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -23,7 +26,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      router.replace("/panel");
+      // La redirección por rol la hace el useEffect al actualizarse el usuario.
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "No se pudo iniciar sesión"
