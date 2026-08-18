@@ -54,6 +54,7 @@ function StudentDetailInner() {
   const [portalCreds, setPortalCreds] = useState<{
     email: string;
     defaultPassword: string;
+    reset: boolean;
   } | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
 
@@ -61,7 +62,7 @@ function StudentDetailInner() {
     setPortalBusy(true);
     setPortalCreds(null);
     try {
-      const r = await api<{ email: string; defaultPassword: string }>(
+      const r = await api<{ email: string; defaultPassword: string; reset: boolean }>(
         `/api/students/${id}/portal-account`,
         { method: "POST" }
       );
@@ -161,7 +162,9 @@ function StudentDetailInner() {
       {portalCreds && (
         <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
           <p className="mb-2 font-medium text-emerald-800">
-            ✓ Cuenta creada. Estas son las credenciales del estudiante para entrar al Campus:
+            {portalCreds.reset
+              ? "✓ Contraseña restablecida. Estas son las credenciales del estudiante para entrar al Campus:"
+              : "✓ Cuenta creada. Estas son las credenciales del estudiante para entrar al Campus:"}
           </p>
           <div className="mb-2 grid gap-1 text-gray-700">
             <div>
