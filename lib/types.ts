@@ -53,6 +53,29 @@ export interface PortalDashboard {
   grades: { acta: string; fase: string; date: string; nota: string }[];
 }
 
+export type CuotaEstado = "pagado" | "vencido" | "parcial" | "pendiente";
+
+export interface PortalCuota {
+  id: string;
+  concept: string;
+  amount: number;
+  paid: number;
+  saldo: number;
+  dueDate: string;
+  estado: CuotaEstado;
+}
+
+export interface PortalCuotas {
+  cuotas: PortalCuota[];
+  summary: {
+    totalCharged: number;
+    totalPaid: number;
+    totalDue: number;
+    overdueAmount: number;
+  };
+  progress: { pagadas: number; total: number };
+}
+
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
 
 export type DocumentType =

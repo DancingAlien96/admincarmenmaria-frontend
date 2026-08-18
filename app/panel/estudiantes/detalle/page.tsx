@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import {
   canAccess,
   DOC_TYPE_LABELS,
+  formatGTQ,
   STATUS_LABELS,
   STATUS_STYLES,
 } from "@/lib/labels";
@@ -57,6 +58,7 @@ function StudentDetailInner() {
     reset: boolean;
   } | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
 
   async function crearAccesoPortal() {
     setPortalBusy(true);
@@ -154,6 +156,14 @@ function StudentDetailInner() {
                     : "Crear acceso al portal"}
               </button>
             )}
+            {canEdit && (
+              <button
+                onClick={() => setShowPlan(true)}
+                className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
+              >
+                Generar plan de cuotas
+              </button>
+            )}
             <button
               onClick={() => setEditing(true)}
               className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
@@ -163,6 +173,17 @@ function StudentDetailInner() {
           </div>
         )}
       </div>
+
+      {showPlan && (
+        <CuotaPlanModal
+          studentId={id}
+          onClose={() => setShowPlan(false)}
+          onDone={() => {
+            setShowPlan(false);
+            void load();
+          }}
+        />
+      )}
 
       {student.portalUser && !portalCreds && (
         <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
@@ -263,6 +284,160 @@ export default function StudentDetailPage() {
     <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
       <StudentDetailInner />
     </Suspense>
+  );
+}
+
+function CuotaPlanModal({
+  studentId,
+  onClose,
+  onDone,
+}: {
+  studentId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const now = new Date();
+  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [inscripcion, setInscripcion] = useState("400");
+  const [mensualidad, setMensualidad] = useState("850");
+  const [numCuotas, setNumCuotas] = useState("12");
+  const [tramite, setTramite] = useState("300");
+  const [startMonth, setStartMonth] = useState(defaultMonth);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const nCuotas = Number(numCuotas) || 0;
+  const total =
+    (Number(inscripcion) || 0) +
+    (Number(mensualidad) || 0) * nCuotas +
+    (Number(tramite) || 0);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      const r = await api<{ created: number }>(
+        `/api/charges/student/${studentId}/plan`,
+        {
+          method: "POST",
+          body: {
+            inscripcion: Number(inscripcion) || 0,
+            mensualidad: Number(mensualidad) || 0,
+            numCuotas: nCuotas,
+            tramite: Number(tramite) || 0,
+            startMonth,
+          },
+        }
+      );
+      alert(`Plan generado: ${r.created} cuota(s) creadas.`);
+      onDone();
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "No se pudo generar el plan"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h3 className="mb-1 text-lg font-bold text-brand-800">
+          Generar plan de cuotas
+        </h3>
+        <p className="mb-4 text-sm text-gray-500">
+          Crea las cuotas del estudiante: Admisión + mensualidades + trámite.
+        </p>
+
+        {error && (
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={submit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <span className="mb-1 block text-gray-600">Admisión (Q)</span>
+              <input
+                type="number"
+                min={0}
+                value={inscripcion}
+                onChange={(e) => setInscripcion(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-gray-600">Mensualidad (Q)</span>
+              <input
+                type="number"
+                min={0}
+                value={mensualidad}
+                onChange={(e) => setMensualidad(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-gray-600"># de mensualidades</span>
+              <input
+                type="number"
+                min={1}
+                max={36}
+                value={numCuotas}
+                onChange={(e) => setNumCuotas(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-gray-600">Trámite (Q)</span>
+              <input
+                type="number"
+                min={0}
+                value={tramite}
+                onChange={(e) => setTramite(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+          <label className="block text-sm">
+            <span className="mb-1 block text-gray-600">Mes de inicio</span>
+            <input
+              type="month"
+              value={startMonth}
+              onChange={(e) => setStartMonth(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </label>
+
+          <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            Total del plan:{" "}
+            <span className="font-semibold text-gray-800">
+              {formatGTQ(total)}
+            </span>{" "}
+            en {nCuotas > 0 ? nCuotas + 1 : 1} cargo(s) aprox.
+          </p>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              {busy ? "Generando…" : "Generar plan"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 
