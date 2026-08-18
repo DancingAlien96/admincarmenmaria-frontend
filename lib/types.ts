@@ -122,6 +122,7 @@ export interface StudentDetail {
   documents: StudentDocument[];
   statusHistory: StatusHistoryEntry[];
   createdBy: { name: string } | null;
+  portalUser: { email: string; active: boolean; createdAt: string } | null;
 }
 
 export interface DuplicateStudent {

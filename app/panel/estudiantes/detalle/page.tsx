@@ -67,6 +67,7 @@ function StudentDetailInner() {
         { method: "POST" }
       );
       setPortalCreds(r);
+      await load();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "No se pudo crear el acceso");
     } finally {
@@ -146,7 +147,11 @@ function StudentDetailInner() {
                 disabled={portalBusy}
                 className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
               >
-                {portalBusy ? "Creando…" : "Crear acceso al portal"}
+                {portalBusy
+                  ? "Procesando…"
+                  : student.portalUser
+                    ? "Restablecer contraseña"
+                    : "Crear acceso al portal"}
               </button>
             )}
             <button
@@ -158,6 +163,25 @@ function StudentDetailInner() {
           </div>
         )}
       </div>
+
+      {student.portalUser && !portalCreds && (
+        <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
+          <p className="text-gray-700">
+            <span className="font-medium text-gray-800">Acceso al Campus:</span>{" "}
+            este estudiante ya tiene cuenta. Usuario:{" "}
+            <code className="rounded bg-white px-2 py-0.5 text-xs">
+              {student.portalUser.email}
+            </code>
+            {!student.portalUser.active && (
+              <span className="ml-2 text-red-600">(cuenta desactivada)</span>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            La contraseña no se puede consultar (se guarda cifrada). Si el
+            estudiante la olvidó, usa “Restablecer contraseña”.
+          </p>
+        </div>
+      )}
 
       {portalCreds && (
         <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
