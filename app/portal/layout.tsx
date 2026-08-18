@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 const NAV = [
   { href: "/portal", label: "Dashboard" },
   { href: "/portal/pagos", label: "Pagos" },
+  { href: "/portal/cuenta", label: "Cambiar contraseña" },
 ];
 
 export default function PortalLayout({

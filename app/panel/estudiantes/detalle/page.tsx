@@ -51,20 +51,23 @@ function StudentDetailInner() {
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [portalLink, setPortalLink] = useState<string | null>(null);
+  const [portalCreds, setPortalCreds] = useState<{
+    email: string;
+    defaultPassword: string;
+  } | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
 
   async function crearAccesoPortal() {
     setPortalBusy(true);
-    setPortalLink(null);
+    setPortalCreds(null);
     try {
-      const r = await api<{ token: string }>("/api/portal-invites", {
-        method: "POST",
-        body: { studentId: id },
-      });
-      setPortalLink(`${window.location.origin}/inscripcion/?token=${r.token}`);
+      const r = await api<{ email: string; defaultPassword: string }>(
+        `/api/students/${id}/portal-account`,
+        { method: "POST" }
+      );
+      setPortalCreds(r);
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo generar el acceso");
+      alert(err instanceof ApiError ? err.message : "No se pudo crear el acceso");
     } finally {
       setPortalBusy(false);
     }
@@ -142,7 +145,7 @@ function StudentDetailInner() {
                 disabled={portalBusy}
                 className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
               >
-                {portalBusy ? "Generando…" : "Generar acceso al portal"}
+                {portalBusy ? "Creando…" : "Crear acceso al portal"}
               </button>
             )}
             <button
@@ -155,22 +158,36 @@ function StudentDetailInner() {
         )}
       </div>
 
-      {portalLink && (
-        <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm">
-          <p className="mb-1 font-medium text-brand-800">
-            Link de activación — envíaselo al estudiante para que cree su contraseña:
+      {portalCreds && (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
+          <p className="mb-2 font-medium text-emerald-800">
+            ✓ Cuenta creada. Estas son las credenciales del estudiante para entrar al Campus:
+          </p>
+          <div className="mb-2 grid gap-1 text-gray-700">
+            <div>
+              <span className="text-gray-500">Usuario (correo):</span>{" "}
+              <code className="rounded bg-white px-2 py-0.5 text-xs">{portalCreds.email}</code>
+            </div>
+            <div>
+              <span className="text-gray-500">Contraseña por defecto:</span>{" "}
+              <code className="rounded bg-white px-2 py-0.5 text-xs">{portalCreds.defaultPassword}</code>
+            </div>
+          </div>
+          <p className="mb-2 text-xs text-gray-500">
+            El estudiante puede cambiar su contraseña desde el portal (Cambiar contraseña).
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="flex-1 break-all rounded bg-white px-2 py-1 text-xs text-gray-700">
-              {portalLink}
-            </code>
             <button
-              onClick={() => void navigator.clipboard.writeText(portalLink)}
-              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+              onClick={() =>
+                void navigator.clipboard.writeText(
+                  `Usuario: ${portalCreds.email}\nContraseña: ${portalCreds.defaultPassword}`
+                )
+              }
+              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
             >
-              Copiar
+              Copiar credenciales
             </button>
-            <button onClick={() => setPortalLink(null)} className="text-xs text-gray-500 hover:underline">
+            <button onClick={() => setPortalCreds(null)} className="text-xs text-gray-500 hover:underline">
               Cerrar
             </button>
           </div>
