@@ -174,6 +174,17 @@ export function Sidebar() {
               >
                 Usuarios y permisos
               </Link>
+              <Link
+                href="/panel/documentos-requeridos"
+                className={[
+                  "flex items-center rounded-lg px-3 py-2 text-sm transition",
+                  pathname.startsWith("/panel/documentos-requeridos")
+                    ? "bg-white/15 font-medium"
+                    : "text-brand-100/80 hover:bg-white/10",
+                ].join(" ")}
+              >
+                Documentos requeridos
+              </Link>
             </>
           )}
         </nav>

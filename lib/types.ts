@@ -76,6 +76,27 @@ export interface PortalCuotas {
   progress: { pagadas: number; total: number };
 }
 
+export interface DocRequirement {
+  id: string;
+  name: string;
+  order: number;
+  active: boolean;
+}
+
+export interface ChecklistItem {
+  requirementId: string;
+  name: string;
+  delivered: boolean;
+  receivedAt: string | null;
+  notes: string;
+}
+
+export interface StudentChecklist {
+  items: ChecklistItem[];
+  entregados: number;
+  total: number;
+}
+
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
 
 export type DocumentType =

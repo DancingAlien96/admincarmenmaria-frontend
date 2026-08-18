@@ -27,15 +27,17 @@ export default function PortalDashboardPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-brand-800">Portal del Estudiante</h1>
+        <h1 className="text-xl font-bold text-brand-800 sm:text-2xl">
+          Portal del Estudiante
+        </h1>
         <p className="text-sm text-gray-500">
           Escuela Privada de Auxiliares de Enfermería Carmen María
         </p>
       </div>
 
       {/* Tarjeta de bienvenida */}
-      <section className="mb-6 rounded-2xl border border-gray-200 bg-white p-6">
-        <h2 className="text-xl font-bold text-brand-800">
+      <section className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+        <h2 className="text-lg font-bold text-brand-800 sm:text-xl">
           Bienvenido/a, {firstName}
         </h2>
         <p className="mt-1 text-sm text-gray-500">

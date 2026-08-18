@@ -63,7 +63,9 @@ export default function PortalPagosPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold text-brand-800">Mis pagos</h1>
+      <h1 className="mb-1 text-xl font-bold text-brand-800 sm:text-2xl">
+        Mis pagos
+      </h1>
       <p className="mb-6 text-sm text-gray-500">
         Tu plan de cuotas y el estado de cada pago.
       </p>
@@ -131,30 +133,32 @@ export default function PortalPagosPage() {
                 return (
                   <li
                     key={c.id}
-                    className="flex flex-wrap items-center gap-3 px-4 py-3.5"
+                    className="flex items-center gap-3 px-4 py-3.5"
                   >
-                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`} />
+                    <span
+                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`}
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-800">{c.concept}</p>
                       <p className="text-xs text-gray-400">
                         Vence: {fmtFecha(c.dueDate)}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="flex shrink-0 flex-col items-end gap-1">
                       <p className="font-semibold text-gray-800">
                         {formatGTQ(c.amount)}
                       </p>
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.badge}`}
+                      >
+                        {meta.label}
+                      </span>
                       {c.saldo > 0 && c.paid > 0 && (
                         <p className="text-xs text-gray-400">
                           Saldo: {formatGTQ(c.saldo)}
                         </p>
                       )}
                     </div>
-                    <span
-                      className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.badge}`}
-                    >
-                      {meta.label}
-                    </span>
                   </li>
                 );
               })}

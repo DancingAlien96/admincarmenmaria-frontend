@@ -12,7 +12,12 @@ import {
   STATUS_LABELS,
   STATUS_STYLES,
 } from "@/lib/labels";
-import type { DocumentType, StudentDetail, StudentStatus } from "@/lib/types";
+import type {
+  DocumentType,
+  StudentChecklist,
+  StudentDetail,
+  StudentStatus,
+} from "@/lib/types";
 import {
   StudentForm,
   type StudentFormValues,
@@ -262,6 +267,7 @@ function StudentDetailInner() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <InfoCard student={student} />
+            <ChecklistCard studentId={id} canEdit={canEdit} />
             <DocumentsCard
               student={student}
               canEdit={canEdit}
@@ -284,6 +290,146 @@ export default function StudentDetailPage() {
     <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
       <StudentDetailInner />
     </Suspense>
+  );
+}
+
+function ChecklistCard({
+  studentId,
+  canEdit,
+}: {
+  studentId: string;
+  canEdit: boolean;
+}) {
+  const [data, setData] = useState<StudentChecklist | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [editNotes, setEditNotes] = useState<{ id: string; value: string } | null>(
+    null
+  );
+
+  const reload = useCallback(async () => {
+    setData(await api<StudentChecklist>(`/api/doc-checklist/student/${studentId}`));
+  }, [studentId]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  async function setStatus(
+    requirementId: string,
+    delivered: boolean,
+    notes: string
+  ) {
+    setSavingId(requirementId);
+    try {
+      const r = await api<StudentChecklist>(
+        `/api/doc-checklist/student/${studentId}/${requirementId}`,
+        { method: "PUT", body: { delivered, notes: notes || null } }
+      );
+      setData(r);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-semibold text-brand-800">Documentación (checklist)</h2>
+        {data && (
+          <span className="text-sm text-gray-500">
+            {data.entregados}/{data.total} entregados
+          </span>
+        )}
+      </div>
+
+      {!data ? (
+        <p className="text-sm text-gray-400">Cargando…</p>
+      ) : data.items.length === 0 ? (
+        <p className="text-sm text-gray-400">
+          No hay documentos configurados.{" "}
+          <Link
+            href="/panel/documentos-requeridos"
+            className="text-brand-600 hover:underline"
+          >
+            Configurar
+          </Link>
+        </p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {data.items.map((it) => (
+            <li key={it.requirementId} className="py-2.5">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={it.delivered}
+                  disabled={!canEdit || savingId === it.requirementId}
+                  onChange={(e) =>
+                    void setStatus(it.requirementId, e.target.checked, it.notes)
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-brand-600"
+                />
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={`text-sm ${
+                      it.delivered ? "text-gray-800" : "text-gray-600"
+                    }`}
+                  >
+                    {it.name}
+                  </p>
+                  {it.notes && (
+                    <p className="text-xs text-gray-400">{it.notes}</p>
+                  )}
+                </div>
+                {canEdit && (
+                  <button
+                    onClick={() =>
+                      setEditNotes({ id: it.requirementId, value: it.notes })
+                    }
+                    className="text-xs text-brand-600 hover:underline"
+                  >
+                    Nota
+                  </button>
+                )}
+              </div>
+
+              {editNotes?.id === it.requirementId && (
+                <div className="mt-2 flex gap-2 pl-7">
+                  <input
+                    value={editNotes.value}
+                    onChange={(e) =>
+                      setEditNotes({ id: it.requirementId, value: e.target.value })
+                    }
+                    placeholder="Observación (opcional)"
+                    className="flex-1 rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                  />
+                  <button
+                    onClick={async () => {
+                      await setStatus(
+                        it.requirementId,
+                        it.delivered,
+                        editNotes.value
+                      );
+                      setEditNotes(null);
+                    }}
+                    className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onClick={() => setEditNotes(null)}
+                    className="text-xs text-gray-500"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
