@@ -50,8 +50,6 @@ export default function StudentsPage() {
     return () => clearTimeout(t);
   }, [load]);
 
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
 
@@ -65,32 +63,11 @@ export default function StudentsPage() {
       });
       setInviteLink(`${window.location.origin}/inscripcion/?token=${r.token}`);
     } catch (err) {
-      setSyncMsg(
+      alert(
         err instanceof ApiError ? err.message : "No se pudo generar el link."
       );
     } finally {
       setInviting(false);
-    }
-  }
-
-  async function syncFromPayments() {
-    setSyncing(true);
-    setSyncMsg(null);
-    try {
-      const r = await api<{ imported: number; updated: number }>(
-        "/api/students/sync",
-        { method: "POST" }
-      );
-      setSyncMsg(
-        `Sincronización lista: ${r.imported} pagos nuevos procesados (se crearon los estudiantes de inscripción que faltaban).`
-      );
-      await load();
-    } catch (err) {
-      setSyncMsg(
-        err instanceof ApiError ? err.message : "No se pudo sincronizar."
-      );
-    } finally {
-      setSyncing(false);
     }
   }
 
@@ -120,13 +97,6 @@ export default function StudentsPage() {
             >
               Revisar duplicados
             </Link>
-            <button
-              onClick={() => void syncFromPayments()}
-              disabled={syncing}
-              className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
-            >
-              {syncing ? "Sincronizando…" : "Sincronizar desde pagos"}
-            </button>
             <Link
               href="/panel/estudiantes/nuevo"
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
@@ -136,12 +106,6 @@ export default function StudentsPage() {
           </div>
         )}
       </div>
-
-      {syncMsg && (
-        <p className="mb-4 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
-          {syncMsg}
-        </p>
-      )}
 
       {inviteLink && (
         <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm">
