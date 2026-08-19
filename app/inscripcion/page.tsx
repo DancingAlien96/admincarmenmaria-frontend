@@ -141,10 +141,6 @@ function InscripcionInner() {
         setError("Sube una fotografía del estudiante.");
         return;
       }
-      if (!guardians[0]?.name.trim()) {
-        setError("Agrega al menos una persona responsable.");
-        return;
-      }
       if (dpiClean.length < 6) {
         setError("El DPI no es válido (será tu contraseña de acceso).");
         return;
@@ -430,7 +426,8 @@ function InscripcionInner() {
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <p className={labelClass + " mb-0"}>
-                    Persona(s) responsable(s) *
+                    Persona(s) responsable(s){" "}
+                    <span className="font-normal text-gray-400">(opcional)</span>
                   </p>
                   <button
                     type="button"
@@ -449,8 +446,7 @@ function InscripcionInner() {
                   {guardians.map((g, i) => (
                     <div key={i} className="grid gap-2 sm:grid-cols-2">
                       <input
-                        required={i === 0}
-                        placeholder="Nombre *"
+                        placeholder="Nombre"
                         value={g.name}
                         onChange={(e) => setGuardian(i, "name", e.target.value)}
                         className={inputClass}
