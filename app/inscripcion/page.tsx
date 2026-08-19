@@ -58,6 +58,7 @@ function InscripcionInner() {
     { name: "", relationship: "", phone: "", email: "" },
   ]);
   const [photo, setPhoto] = useState<{ url: string; key: string } | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -102,6 +103,9 @@ function InscripcionInner() {
   async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Vista previa local inmediata (antes de que termine la subida).
+    setPreview(URL.createObjectURL(file));
+    setPhoto(null);
     setPhotoBusy(true);
     setError(null);
     try {
@@ -118,6 +122,7 @@ function InscripcionInner() {
       const stored = (await r.json()) as { url: string; key: string };
       setPhoto({ url: stored.url, key: stored.key });
     } catch (err) {
+      setPreview(null);
       setError(err instanceof Error ? err.message : "No se pudo subir la foto");
     } finally {
       setPhotoBusy(false);
@@ -128,30 +133,40 @@ function InscripcionInner() {
     e.preventDefault();
     setError(null);
     const isActivation = invite?.mode === "activacion";
+    // Contraseña por defecto en la inscripción = DPI del alumno (sin espacios).
+    const dpiClean = form.dpi.replace(/\s+/g, "");
 
-    if (!isActivation && !photo) {
-      setError("Sube una fotografía del estudiante.");
-      return;
+    if (!isActivation) {
+      if (!photo) {
+        setError("Sube una fotografía del estudiante.");
+        return;
+      }
+      if (!guardians[0]?.name.trim()) {
+        setError("Agrega al menos una persona responsable.");
+        return;
+      }
+      if (dpiClean.length < 6) {
+        setError("El DPI no es válido (será tu contraseña de acceso).");
+        return;
+      }
+    } else {
+      if (form.password.length < 6) {
+        setError("La contraseña debe tener al menos 6 caracteres.");
+        return;
+      }
+      if (form.password !== form.confirm) {
+        setError("Las contraseñas no coinciden.");
+        return;
+      }
     }
-    if (!isActivation && !guardians[0]?.name.trim()) {
-      setError("Agrega al menos una persona responsable.");
-      return;
-    }
-    if (form.password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError("Las contraseñas no coinciden.");
-      return;
-    }
+
+    const loginPassword = isActivation ? form.password : dpiClean;
     setSaving(true);
     try {
       const body = isActivation
         ? { email: form.email, password: form.password }
         : {
             email: form.email,
-            password: form.password,
             fullName: form.fullName,
             dpi: form.dpi,
             birthDate: form.birthDate,
@@ -183,7 +198,7 @@ function InscripcionInner() {
         const j = await r.json().catch(() => ({}));
         throw new Error(j.message ?? "No se pudo completar el registro");
       }
-      await login(form.email, form.password);
+      await login(form.email, loginPassword);
       router.replace("/portal");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrarte");
@@ -250,14 +265,26 @@ function InscripcionInner() {
             <>
               {/* Fotografía */}
               <div className="flex items-center gap-4 rounded-lg border border-gray-200 p-3">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
-                  {photo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={photo.url}
-                      alt="Foto"
-                      className="h-full w-full object-cover"
-                    />
+                <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
+                  {preview || photo ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={preview ?? photo!.url}
+                        alt="Foto del estudiante"
+                        className="h-full w-full object-cover"
+                      />
+                      {photoBusy && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-[10px] font-medium text-white">
+                          Subiendo…
+                        </span>
+                      )}
+                      {photo && !photoBusy && (
+                        <span className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-green-500 text-[10px] text-white">
+                          ✓
+                        </span>
+                      )}
+                    </>
                   ) : (
                     <span className="text-3xl text-gray-300">📷</span>
                   )}
@@ -477,29 +504,36 @@ function InscripcionInner() {
               placeholder="correo@ejemplo.com"
             />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={labelClass}>Contraseña *</label>
-              <input
-                type="password"
-                required
-                value={form.password}
-                onChange={(e) => set("password", e.target.value)}
-                className={inputClass}
-                placeholder="Mínimo 6 caracteres"
-              />
+          {isActivation ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Contraseña *</label>
+                <input
+                  type="password"
+                  required
+                  value={form.password}
+                  onChange={(e) => set("password", e.target.value)}
+                  className={inputClass}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Confirmar *</label>
+                <input
+                  type="password"
+                  required
+                  value={form.confirm}
+                  onChange={(e) => set("confirm", e.target.value)}
+                  className={inputClass}
+                />
+              </div>
             </div>
-            <div>
-              <label className={labelClass}>Confirmar *</label>
-              <input
-                type="password"
-                required
-                value={form.confirm}
-                onChange={(e) => set("confirm", e.target.value)}
-                className={inputClass}
-              />
-            </div>
-          </div>
+          ) : (
+            <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
+              🔑 Tu contraseña será tu <strong>DPI</strong> (sin espacios).
+              Podrás cambiarla después desde el portal, en “Cambiar contraseña”.
+            </p>
+          )}
 
           {error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
