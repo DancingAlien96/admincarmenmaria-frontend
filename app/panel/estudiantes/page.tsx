@@ -53,6 +53,27 @@ export default function StudentsPage() {
 
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
+  const [insOpen, setInsOpen] = useState<boolean | null>(null);
+
+  // Estado del interruptor de inscripciones (solo admin).
+  useEffect(() => {
+    if (user?.role !== "ADMIN") return;
+    api<{ inscripcionesAbiertas: boolean }>("/api/portal-invites/admin/settings")
+      .then((r) => setInsOpen(r.inscripcionesAbiertas))
+      .catch(() => setInsOpen(null));
+  }, [user?.role]);
+
+  async function toggleInscripciones() {
+    try {
+      const r = await api<{ inscripcionesAbiertas: boolean }>(
+        "/api/portal-invites/admin/settings",
+        { method: "POST", body: { open: !insOpen } }
+      );
+      setInsOpen(r.inscripcionesAbiertas);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo cambiar el estado.");
+    }
+  }
 
   async function generarLinkInscripcion() {
     setInviting(true);
@@ -83,6 +104,19 @@ export default function StudentsPage() {
         </div>
         {canEdit && (
           <div className="flex flex-wrap gap-2">
+            {user?.role === "ADMIN" && insOpen !== null && (
+              <button
+                onClick={() => void toggleInscripciones()}
+                className={`rounded-lg border px-4 py-2 text-sm font-medium ${
+                  insOpen
+                    ? "border-green-300 bg-green-50 text-green-700 hover:bg-green-100"
+                    : "border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                }`}
+                title="Habilita o deshabilita el formulario público de inscripción"
+              >
+                Inscripciones: {insOpen ? "Abiertas" : "Cerradas"}
+              </button>
+            )}
             {user?.role === "ADMIN" && (
               <button
                 onClick={() => void generarLinkInscripcion()}

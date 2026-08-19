@@ -6,7 +6,7 @@ import { api, ApiError, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 
 interface InviteInfo {
-  mode: "activacion" | "inscripcion";
+  mode: "activacion" | "inscripcion" | "cerrado";
   studentName?: string | null;
   studentEmail?: string | null;
   expediente?: string | null;
@@ -40,7 +40,12 @@ function InscripcionInner() {
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
-    fullName: "",
+    primerNombre: "",
+    segundoNombre: "",
+    tercerNombre: "",
+    primerApellido: "",
+    segundoApellido: "",
+    tercerApellido: "",
     dpi: "",
     birthDate: "",
     department: "",
@@ -74,7 +79,6 @@ function InscripcionInner() {
       setInvite(inv);
       setForm((f) => ({
         ...f,
-        fullName: inv.prefillName ?? "",
         sede: inv.sede ?? "",
         email: inv.studentEmail ?? "",
         startYear: inv.cohorteYear ? String(inv.cohorteYear) : "",
@@ -137,6 +141,10 @@ function InscripcionInner() {
     const dpiClean = form.dpi.replace(/\s+/g, "");
 
     if (!isActivation) {
+      if (!form.primerNombre.trim() || !form.primerApellido.trim()) {
+        setError("Escribe al menos tu primer nombre y primer apellido.");
+        return;
+      }
       if (!photo) {
         setError("Sube una fotografía del estudiante.");
         return;
@@ -163,7 +171,12 @@ function InscripcionInner() {
         ? { email: form.email, password: form.password }
         : {
             email: form.email,
-            fullName: form.fullName,
+            primerNombre: form.primerNombre,
+            segundoNombre: form.segundoNombre,
+            tercerNombre: form.tercerNombre,
+            primerApellido: form.primerApellido,
+            segundoApellido: form.segundoApellido,
+            tercerApellido: form.tercerApellido,
             dpi: form.dpi,
             birthDate: form.birthDate,
             department: form.department,
@@ -212,6 +225,29 @@ function InscripcionInner() {
         <p className="mt-2 text-sm text-gray-500">
           {loadErr ?? "El enlace no es válido o ya fue utilizado."}
         </p>
+      </div>
+    );
+  }
+
+  // Inscripciones cerradas por el admin.
+  if (invite.mode === "cerrado") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-brand-800 px-4 py-8">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logocarmenmaria.png"
+            alt="Carmen María"
+            className="mx-auto mb-3 h-14 w-14 object-contain"
+          />
+          <h1 className="text-xl font-bold text-brand-800">
+            Inscripciones cerradas
+          </h1>
+          <p className="mt-2 text-sm text-gray-500">
+            En este momento las inscripciones no están disponibles. Comunícate
+            con la Escuela de Enfermería Carmen María para más información.
+          </p>
+        </div>
       </div>
     );
   }
@@ -312,15 +348,61 @@ function InscripcionInner() {
                 </div>
               </div>
 
-              <div>
-                <label className={labelClass}>Nombre completo *</label>
-                <input
-                  required
-                  value={form.fullName}
-                  onChange={(e) => set("fullName", e.target.value)}
-                  className={inputClass}
-                  placeholder="Nombres y apellidos"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Primer nombre *</label>
+                  <input
+                    required
+                    value={form.primerNombre}
+                    onChange={(e) => set("primerNombre", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Segundo nombre</label>
+                  <input
+                    value={form.segundoNombre}
+                    onChange={(e) => set("segundoNombre", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Tercer nombre</label>
+                  <input
+                    value={form.tercerNombre}
+                    onChange={(e) => set("tercerNombre", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="hidden sm:block" />
+                <div>
+                  <label className={labelClass}>Primer apellido *</label>
+                  <input
+                    required
+                    value={form.primerApellido}
+                    onChange={(e) => set("primerApellido", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Segundo apellido</label>
+                  <input
+                    value={form.segundoApellido}
+                    onChange={(e) => set("segundoApellido", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    Tercer apellido{" "}
+                    <span className="font-normal text-gray-400">(opcional)</span>
+                  </label>
+                  <input
+                    value={form.tercerApellido}
+                    onChange={(e) => set("tercerApellido", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
