@@ -7,6 +7,7 @@ export interface StudentFormValues {
   fullName: string;
   dpi: string;
   birthDate: string;
+  enrollmentDate: string;
   department: string;
   municipality: string;
   address: string;
@@ -21,6 +22,7 @@ export const emptyStudentForm: StudentFormValues = {
   fullName: "",
   dpi: "",
   birthDate: "",
+  enrollmentDate: "",
   department: "",
   municipality: "",
   address: "",
@@ -122,6 +124,19 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
               value={values.birthDate}
               onChange={(e) => set("birthDate", e.target.value)}
             />
+          </div>
+          <div>
+            <label className={labelClass}>Fecha de inscripción</label>
+            <input
+              type="date"
+              className={inputClass}
+              value={values.enrollmentDate}
+              onChange={(e) => set("enrollmentDate", e.target.value)}
+            />
+            <p className="mt-1 text-xs text-gray-400">
+              Define la cohorte/promoción (año). Cámbiala para inscripciones
+              adelantadas (ej. registrar hoy a un alumno del 2027).
+            </p>
           </div>
           <div>
             <label className={labelClass}>Departamento</label>

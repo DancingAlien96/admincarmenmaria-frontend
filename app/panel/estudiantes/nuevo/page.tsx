@@ -13,6 +13,7 @@ function toPayload(v: StudentFormValues) {
     fullName: v.fullName,
     dpi: v.dpi,
     birthDate: v.birthDate || null,
+    enrollmentDate: v.enrollmentDate || null,
     department: v.department,
     municipality: v.municipality,
     address: v.address,
