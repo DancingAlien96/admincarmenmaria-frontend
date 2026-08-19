@@ -251,8 +251,8 @@ function InscripcionInner() {
           </div>
         ) : (
           <p className="mb-4 text-center text-xs text-gray-400">
-            Completa todos los campos con tus datos reales. Todos son
-            obligatorios.
+            Completa tus datos reales. Los campos con{" "}
+            <span className="text-red-400">*</span> son obligatorios.
           </p>
         )}
 
