@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { QRCodeCanvas } from "qrcode.react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess, STATUS_LABELS, STATUS_STYLES } from "@/lib/labels";
@@ -109,25 +110,31 @@ export default function StudentsPage() {
 
       {inviteLink && (
         <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm">
-          <p className="mb-1 font-medium text-brand-800">
-            Link de inscripción generado — compártelo con el aspirante:
+          <p className="mb-2 font-medium text-brand-800">
+            Link de inscripción generado — compártelo con el aspirante o
+            imprime el QR:
           </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <code className="flex-1 break-all rounded bg-white px-2 py-1 text-xs text-gray-700">
-              {inviteLink}
-            </code>
-            <button
-              onClick={() => void navigator.clipboard.writeText(inviteLink)}
-              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
-            >
-              Copiar
-            </button>
-            <button
-              onClick={() => setInviteLink(null)}
-              className="text-xs text-gray-500 hover:underline"
-            >
-              Cerrar
-            </button>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="flex-1 break-all rounded bg-white px-2 py-1 text-xs text-gray-700">
+                  {inviteLink}
+                </code>
+                <button
+                  onClick={() => void navigator.clipboard.writeText(inviteLink)}
+                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+                >
+                  Copiar
+                </button>
+                <button
+                  onClick={() => setInviteLink(null)}
+                  className="text-xs text-gray-500 hover:underline"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+            <InviteQR link={inviteLink} />
           </div>
         </div>
       )}
@@ -266,6 +273,35 @@ export default function StudentsPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// QR del link de inscripción (para imprimir/compartir).
+function InviteQR({ link }: { link: string }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  function download() {
+    const canvas = wrapRef.current?.querySelector("canvas");
+    if (!canvas) return;
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "inscripcion-qr.png";
+    a.click();
+  }
+
+  return (
+    <div className="flex shrink-0 flex-col items-center gap-2">
+      <div ref={wrapRef} className="rounded-lg bg-white p-2 shadow-sm">
+        <QRCodeCanvas value={link} size={132} level="M" marginSize={2} />
+      </div>
+      <button
+        onClick={download}
+        className="text-xs font-medium text-brand-600 hover:underline"
+      >
+        Descargar QR
+      </button>
     </div>
   );
 }
