@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Guardian } from "@/lib/types";
+import { GT_DEPARTAMENTOS_LIST, municipiosDe } from "@/lib/gt-geo";
 
 export interface StudentFormValues {
   fullName: string;
@@ -140,19 +141,57 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
           </div>
           <div>
             <label className={labelClass}>Departamento</label>
-            <input
+            <select
               className={inputClass}
               value={values.department}
-              onChange={(e) => set("department", e.target.value)}
-            />
+              onChange={(e) =>
+                setValues((v) => ({
+                  ...v,
+                  department: e.target.value,
+                  municipality: "",
+                }))
+              }
+            >
+              <option value="">Selecciona…</option>
+              {GT_DEPARTAMENTOS_LIST.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+              {/* Conserva un valor previo que no esté en la lista */}
+              {values.department &&
+                !GT_DEPARTAMENTOS_LIST.includes(values.department) && (
+                  <option value={values.department}>{values.department}</option>
+                )}
+            </select>
           </div>
           <div>
             <label className={labelClass}>Municipio</label>
-            <input
-              className={inputClass}
+            <select
+              className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-100`}
               value={values.municipality}
+              disabled={!values.department}
               onChange={(e) => set("municipality", e.target.value)}
-            />
+            >
+              <option value="">
+                {values.department
+                  ? "Selecciona…"
+                  : "Elige un departamento primero"}
+              </option>
+              {municipiosDe(values.department).map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+              {values.municipality &&
+                !municipiosDe(values.department).includes(
+                  values.municipality
+                ) && (
+                  <option value={values.municipality}>
+                    {values.municipality}
+                  </option>
+                )}
+            </select>
           </div>
           <div>
             <label className={labelClass}>Sede</label>

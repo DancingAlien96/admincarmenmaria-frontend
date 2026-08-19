@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { GT_DEPARTAMENTOS_LIST, municipiosDe } from "@/lib/gt-geo";
 
 interface InviteInfo {
   mode: "activacion" | "inscripcion" | "cerrado";
@@ -444,21 +445,46 @@ function InscripcionInner() {
                 </div>
                 <div>
                   <label className={labelClass}>Departamento *</label>
-                  <input
+                  <select
                     required
                     value={form.department}
-                    onChange={(e) => set("department", e.target.value)}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        department: e.target.value,
+                        municipality: "", // se reinicia al cambiar departamento
+                      }))
+                    }
                     className={inputClass}
-                  />
+                  >
+                    <option value="">Selecciona…</option>
+                    {GT_DEPARTAMENTOS_LIST.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className={labelClass}>Municipio *</label>
-                  <input
+                  <select
                     required
                     value={form.municipality}
+                    disabled={!form.department}
                     onChange={(e) => set("municipality", e.target.value)}
-                    className={inputClass}
-                  />
+                    className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-100`}
+                  >
+                    <option value="">
+                      {form.department
+                        ? "Selecciona…"
+                        : "Elige un departamento primero"}
+                    </option>
+                    {municipiosDe(form.department).map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
