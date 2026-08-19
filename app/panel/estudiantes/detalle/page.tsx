@@ -9,11 +9,14 @@ import {
   canAccess,
   DOC_TYPE_LABELS,
   formatGTQ,
+  PAYMENT_METHOD_LABELS,
   STATUS_LABELS,
   STATUS_STYLES,
 } from "@/lib/labels";
 import type {
   DocumentType,
+  PaymentMethod,
+  StudentAccount,
   StudentChecklist,
   StudentDetail,
   StudentStatus,
@@ -53,6 +56,8 @@ function StudentDetailInner() {
   const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const canEdit = canAccess(user, "STUDENTS", "EDITOR");
+  const canPagos = canAccess(user, "PAYMENTS", "READER");
+  const canPagosEdit = canAccess(user, "PAYMENTS", "EDITOR");
 
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +69,7 @@ function StudentDetailInner() {
   } | null>(null);
   const [portalBusy, setPortalBusy] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
+  const [pagosRefresh, setPagosRefresh] = useState(0);
 
   async function crearAccesoPortal() {
     setPortalBusy(true);
@@ -185,7 +191,7 @@ function StudentDetailInner() {
           onClose={() => setShowPlan(false)}
           onDone={() => {
             setShowPlan(false);
-            void load();
+            setPagosRefresh((x) => x + 1);
           }}
         />
       )}
@@ -267,6 +273,14 @@ function StudentDetailInner() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             <InfoCard student={student} />
+            {canPagos && (
+              <CuotasCard
+                studentId={id}
+                canEdit={canPagosEdit}
+                refreshKey={pagosRefresh}
+                onGenerar={() => setShowPlan(true)}
+              />
+            )}
             <ChecklistCard studentId={id} canEdit={canEdit} />
             <DocumentsCard
               student={student}
@@ -290,6 +304,224 @@ export default function StudentDetailPage() {
     <Suspense fallback={<p className="text-gray-400">Cargando…</p>}>
       <StudentDetailInner />
     </Suspense>
+  );
+}
+
+const CHARGE_METHODS: PaymentMethod[] = [
+  "EFECTIVO",
+  "TRANSFERENCIA",
+  "DEPOSITO",
+  "TARJETA",
+];
+
+function chargeEstado(c: StudentAccount["charges"][number]) {
+  if (c.status === "ANULADO")
+    return { label: "Anulado", cls: "border-gray-200 bg-gray-50 text-gray-400" };
+  if (c.status === "PAGADO" || c.saldo <= 0)
+    return { label: "Pagado", cls: "border-green-200 bg-green-50 text-green-700" };
+  if (c.overdue)
+    return { label: "Vencido", cls: "border-red-200 bg-red-50 text-red-700" };
+  if (c.paid > 0)
+    return { label: "Parcial", cls: "border-blue-200 bg-blue-50 text-blue-700" };
+  return { label: "Pendiente", cls: "border-gray-200 bg-gray-50 text-gray-500" };
+}
+
+function CuotasCard({
+  studentId,
+  canEdit,
+  refreshKey,
+  onGenerar,
+}: {
+  studentId: string;
+  canEdit: boolean;
+  refreshKey: number;
+  onGenerar: () => void;
+}) {
+  const [data, setData] = useState<StudentAccount | null>(null);
+  const [payFor, setPayFor] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    setData(await api<StudentAccount>(`/api/charges/student/${studentId}`));
+  }, [studentId]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload, refreshKey]);
+
+  const charges = data
+    ? [...data.charges].sort(
+        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      )
+    : [];
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold text-brand-800">Estado de cuenta (cuotas)</h2>
+        {data && data.charges.length > 0 && (
+          <span className="text-sm text-gray-500">
+            Pagado {formatGTQ(data.summary.totalPaid)} · Saldo{" "}
+            {formatGTQ(data.summary.totalDue)}
+          </span>
+        )}
+      </div>
+
+      {!data ? (
+        <p className="text-sm text-gray-400">Cargando…</p>
+      ) : charges.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
+          <p className="text-sm text-gray-500">
+            Este estudiante aún no tiene un plan de cuotas.
+          </p>
+          {canEdit && (
+            <button
+              onClick={onGenerar}
+              className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Generar plan de cuotas
+            </button>
+          )}
+        </div>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {charges.map((c) => {
+            const est = chargeEstado(c);
+            const pagable = canEdit && c.status === "PENDIENTE" && c.saldo > 0;
+            return (
+              <li key={c.id} className="py-3">
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-800">
+                      {c.concept}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Vence: {c.dueDate.slice(0, 10)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {formatGTQ(c.amount)}
+                    </p>
+                    <span
+                      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${est.cls}`}
+                    >
+                      {est.label}
+                    </span>
+                  </div>
+                  {pagable && (
+                    <button
+                      onClick={() => setPayFor(payFor === c.id ? null : c.id)}
+                      className="shrink-0 rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
+                    >
+                      {payFor === c.id ? "Cerrar" : "Registrar pago"}
+                    </button>
+                  )}
+                </div>
+
+                {pagable && payFor === c.id && (
+                  <RegistrarPagoInline
+                    studentId={studentId}
+                    charge={c}
+                    onDone={async () => {
+                      setPayFor(null);
+                      await reload();
+                    }}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function RegistrarPagoInline({
+  studentId,
+  charge,
+  onDone,
+}: {
+  studentId: string;
+  charge: StudentAccount["charges"][number];
+  onDone: () => void | Promise<void>;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [amount, setAmount] = useState(String(charge.saldo));
+  const [method, setMethod] = useState<PaymentMethod>("EFECTIVO");
+  const [paidAt, setPaidAt] = useState(today);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api("/api/payments", {
+        method: "POST",
+        body: {
+          studentId,
+          chargeId: charge.id,
+          concept: charge.concept,
+          amount: Number(amount) || 0,
+          method,
+          paidAt,
+        },
+      });
+      await onDone();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo registrar el pago");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-3 flex flex-wrap items-end gap-2 rounded-lg bg-gray-50 p-3"
+    >
+      <label className="text-xs">
+        <span className="mb-1 block text-gray-500">Monto (Q)</span>
+        <input
+          type="number"
+          min={0}
+          step="0.01"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+        />
+      </label>
+      <label className="text-xs">
+        <span className="mb-1 block text-gray-500">Método</span>
+        <select
+          value={method}
+          onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+          className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+        >
+          {CHARGE_METHODS.map((m) => (
+            <option key={m} value={m}>
+              {PAYMENT_METHOD_LABELS[m]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs">
+        <span className="mb-1 block text-gray-500">Fecha</span>
+        <input
+          type="date"
+          value={paidAt}
+          onChange={(e) => setPaidAt(e.target.value)}
+          className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={busy}
+        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+      >
+        {busy ? "Guardando…" : "Registrar"}
+      </button>
+    </form>
   );
 }
 

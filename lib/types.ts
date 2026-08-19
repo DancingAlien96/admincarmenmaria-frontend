@@ -97,6 +97,27 @@ export interface StudentChecklist {
   total: number;
 }
 
+export interface AdminCharge {
+  id: string;
+  concept: string;
+  amount: number;
+  dueDate: string;
+  status: "PENDIENTE" | "PAGADO" | "ANULADO";
+  paid: number;
+  saldo: number;
+  overdue: boolean;
+}
+
+export interface StudentAccount {
+  charges: AdminCharge[];
+  summary: {
+    totalCharged: number;
+    totalPaid: number;
+    totalDue: number;
+    overdueAmount: number;
+  };
+}
+
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
 
 export type DocumentType =
