@@ -37,6 +37,7 @@ export interface PortalDashboard {
     enrollmentDate: string;
     email: string | null;
     phonePrimary: string | null;
+    photoUrl: string | null;
   };
   pagosRealizados: number;
   totalPagado: number;
@@ -189,6 +190,7 @@ export interface StudentDetail {
   phonePrimary: string | null;
   phoneAlt: string | null;
   email: string | null;
+  photoUrl: string | null;
   status: StudentStatus;
   enrollmentDate: string;
   archived: boolean;

@@ -815,7 +815,19 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 function InfoCard({ student }: { student: StudentDetail }) {
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
-      <h2 className="mb-4 font-semibold text-brand-800">Datos personales</h2>
+      <div className="mb-4 flex items-center gap-4">
+        {student.photoUrl && (
+          <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={student.photoUrl}
+              alt={student.fullName}
+              className="h-full w-full object-cover"
+            />
+          </span>
+        )}
+        <h2 className="font-semibold text-brand-800">Datos personales</h2>
+      </div>
       <dl className="grid gap-4 sm:grid-cols-2">
         <Field label="DPI" value={student.dpi} />
         <Field

@@ -36,27 +36,39 @@ export default function PortalDashboardPage() {
       </div>
 
       {/* Tarjeta de bienvenida */}
-      <section className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
-        <h2 className="text-lg font-bold text-brand-800 sm:text-xl">
-          Bienvenido/a, {firstName}
-        </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Expediente{" "}
-          <span className="font-medium text-gray-700">
-            {s.expedienteNumber ?? "—"}
+      <section className="mb-6 flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+        {s.photoUrl && (
+          <span className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-gray-100 sm:h-20 sm:w-20">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={s.photoUrl}
+              alt={s.fullName}
+              className="h-full w-full object-cover"
+            />
           </span>
-          {s.sede ? ` · Sede ${s.sede}` : ""}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              s.status === "ACTIVO"
-                ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-600"
-            }`}
-          >
-            {statusLabel}
-          </span>
+        )}
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold text-brand-800 sm:text-xl">
+            Bienvenido/a, {firstName}
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Expediente{" "}
+            <span className="font-medium text-gray-700">
+              {s.expedienteNumber ?? "—"}
+            </span>
+            {s.sede ? ` · Sede ${s.sede}` : ""}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                s.status === "ACTIVO"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {statusLabel}
+            </span>
+          </div>
         </div>
       </section>
 

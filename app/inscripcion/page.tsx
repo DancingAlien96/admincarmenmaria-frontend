@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -15,14 +15,25 @@ interface InviteInfo {
   cohorteYear?: number | null;
 }
 
+interface GuardianForm {
+  name: string;
+  relationship: string;
+  phone: string;
+  email: string;
+}
+
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
 const labelClass = "mb-1 block text-sm font-medium text-gray-700";
+
+const CURRENT_YEAR = new Date().getFullYear();
+const START_YEARS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - 1 + i);
 
 function InscripcionInner() {
   const token = useSearchParams().get("token") ?? "";
   const router = useRouter();
   const { login } = useAuth();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [invite, setInvite] = useState<InviteInfo | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
@@ -31,14 +42,23 @@ function InscripcionInner() {
   const [form, setForm] = useState({
     fullName: "",
     dpi: "",
+    birthDate: "",
     department: "",
     municipality: "",
+    address: "",
     sede: "",
     phone: "",
+    phoneAlt: "",
+    startYear: "",
     email: "",
     password: "",
     confirm: "",
   });
+  const [guardians, setGuardians] = useState<GuardianForm[]>([
+    { name: "", relationship: "", phone: "", email: "" },
+  ]);
+  const [photo, setPhoto] = useState<{ url: string; key: string } | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -56,6 +76,7 @@ function InscripcionInner() {
         fullName: inv.prefillName ?? "",
         sede: inv.sede ?? "",
         email: inv.studentEmail ?? "",
+        startYear: inv.cohorteYear ? String(inv.cohorteYear) : "",
       }));
     } catch (e) {
       setLoadErr(
@@ -74,9 +95,48 @@ function InscripcionInner() {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
+  function setGuardian(i: number, k: keyof GuardianForm, v: string) {
+    setGuardians((gs) => gs.map((g, idx) => (idx === i ? { ...g, [k]: v } : g)));
+  }
+
+  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch(`${apiUrl}/api/portal-invites/${token}/photo`, {
+        method: "POST",
+        body: fd,
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.message ?? "No se pudo subir la foto");
+      }
+      const stored = (await r.json()) as { url: string; key: string };
+      setPhoto({ url: stored.url, key: stored.key });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo subir la foto");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const isActivation = invite?.mode === "activacion";
+
+    if (!isActivation && !photo) {
+      setError("Sube una fotografía del estudiante.");
+      return;
+    }
+    if (!isActivation && !guardians[0]?.name.trim()) {
+      setError("Agrega al menos una persona responsable.");
+      return;
+    }
     if (form.password.length < 6) {
       setError("La contraseña debe tener al menos 6 caracteres.");
       return;
@@ -87,27 +147,42 @@ function InscripcionInner() {
     }
     setSaving(true);
     try {
-      await fetch(`${apiUrl}/api/portal-invites/${token}/register`, {
+      const body = isActivation
+        ? { email: form.email, password: form.password }
+        : {
+            email: form.email,
+            password: form.password,
+            fullName: form.fullName,
+            dpi: form.dpi,
+            birthDate: form.birthDate,
+            department: form.department,
+            municipality: form.municipality,
+            address: form.address,
+            sede: form.sede,
+            phone: form.phone,
+            phoneAlt: form.phoneAlt,
+            startYear: Number(form.startYear) || undefined,
+            photoUrl: photo?.url,
+            photoKey: photo?.key,
+            guardians: guardians
+              .filter((g) => g.name.trim())
+              .map((g) => ({
+                name: g.name,
+                relationship: g.relationship,
+                phone: g.phone,
+                email: g.email,
+              })),
+          };
+      const r = await fetch(`${apiUrl}/api/portal-invites/${token}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-          fullName: form.fullName,
-          dpi: form.dpi,
-          department: form.department,
-          municipality: form.municipality,
-          sede: form.sede,
-          phone: form.phone,
-        }),
-      }).then(async (r) => {
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          throw new Error(j.message ?? "No se pudo completar el registro");
-        }
+        body: JSON.stringify(body),
       });
-      // Inicia sesión con las credenciales recién creadas y entra al portal.
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j.message ?? "No se pudo completar el registro");
+      }
       await login(form.email, form.password);
       router.replace("/portal");
     } catch (err) {
@@ -134,7 +209,7 @@ function InscripcionInner() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-800 px-4 py-8">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-xl">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl sm:p-8">
         <div className="mb-6 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -143,14 +218,14 @@ function InscripcionInner() {
             className="mx-auto mb-2 h-14 w-14 object-contain"
           />
           <h1 className="text-xl font-bold text-brand-800">
-            {isActivation ? "Activa tu acceso" : "Inscripción"}
+            {isActivation ? "Activa tu acceso" : "Ficha de inscripción"}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
             Escuela de Enfermería Carmen María
           </p>
         </div>
 
-        {isActivation && (
+        {isActivation ? (
           <div className="mb-4 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">
             <p className="font-medium">{invite.studentName}</p>
             {invite.expediente && (
@@ -163,43 +238,231 @@ function InscripcionInner() {
               Crea tu contraseña para entrar al portal.
             </p>
           </div>
+        ) : (
+          <p className="mb-4 text-center text-xs text-gray-400">
+            Completa todos los campos con tus datos reales. Todos son
+            obligatorios.
+          </p>
         )}
 
         <form onSubmit={submit} className="space-y-4">
           {!isActivation && (
             <>
+              {/* Fotografía */}
+              <div className="flex items-center gap-4 rounded-lg border border-gray-200 p-3">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-100">
+                  {photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo.url}
+                      alt="Foto"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-3xl text-gray-300">📷</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={labelClass}>Fotografía del estudiante *</p>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={onPhoto}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={photoBusy}
+                    className="rounded-lg border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+                  >
+                    {photoBusy
+                      ? "Subiendo…"
+                      : photo
+                        ? "Cambiar foto"
+                        : "Subir foto"}
+                  </button>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Foto reciente, rostro visible. JPG o PNG.
+                  </p>
+                </div>
+              </div>
+
               <div>
                 <label className={labelClass}>Nombre completo *</label>
-                <input required value={form.fullName} onChange={(e) => set("fullName", e.target.value)} className={inputClass} placeholder="Nombres y apellidos" />
+                <input
+                  required
+                  value={form.fullName}
+                  onChange={(e) => set("fullName", e.target.value)}
+                  className={inputClass}
+                  placeholder="Nombres y apellidos"
+                />
               </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={labelClass}>DPI</label>
-                  <input value={form.dpi} onChange={(e) => set("dpi", e.target.value)} className={inputClass} />
+                  <label className={labelClass}>DPI *</label>
+                  <input
+                    required
+                    value={form.dpi}
+                    onChange={(e) => set("dpi", e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
                 <div>
-                  <label className={labelClass}>Teléfono</label>
-                  <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className={inputClass} />
+                  <label className={labelClass}>Fecha de nacimiento *</label>
+                  <input
+                    type="date"
+                    required
+                    value={form.birthDate}
+                    onChange={(e) => set("birthDate", e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
                 <div>
-                  <label className={labelClass}>Departamento</label>
-                  <input value={form.department} onChange={(e) => set("department", e.target.value)} className={inputClass} />
+                  <label className={labelClass}>Teléfono *</label>
+                  <input
+                    required
+                    value={form.phone}
+                    onChange={(e) => set("phone", e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
                 <div>
-                  <label className={labelClass}>Municipio</label>
-                  <input value={form.municipality} onChange={(e) => set("municipality", e.target.value)} className={inputClass} />
+                  <label className={labelClass}>Teléfono alternativo</label>
+                  <input
+                    value={form.phoneAlt}
+                    onChange={(e) => set("phoneAlt", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Departamento *</label>
+                  <input
+                    required
+                    value={form.department}
+                    onChange={(e) => set("department", e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Municipio *</label>
+                  <input
+                    required
+                    value={form.municipality}
+                    onChange={(e) => set("municipality", e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
               </div>
-              {!invite.sede && (
+
+              <div>
+                <label className={labelClass}>Dirección exacta *</label>
+                <input
+                  required
+                  value={form.address}
+                  onChange={(e) => set("address", e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className={labelClass}>Sede</label>
-                  <select value={form.sede} onChange={(e) => set("sede", e.target.value)} className={inputClass}>
+                  <label className={labelClass}>Sede *</label>
+                  <select
+                    required
+                    value={form.sede}
+                    onChange={(e) => set("sede", e.target.value)}
+                    className={inputClass}
+                  >
                     <option value="">Selecciona…</option>
                     <option value="Chiquimula">Chiquimula</option>
                     <option value="Morales Izabal">Morales Izabal</option>
                   </select>
                 </div>
-              )}
+                <div>
+                  <label className={labelClass}>¿En qué año inicias? *</label>
+                  <select
+                    required
+                    value={form.startYear}
+                    onChange={(e) => set("startYear", e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Selecciona…</option>
+                    {START_YEARS.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Responsables */}
+              <div className="rounded-lg border border-gray-200 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className={labelClass + " mb-0"}>
+                    Persona(s) responsable(s) *
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setGuardians((gs) => [
+                        ...gs,
+                        { name: "", relationship: "", phone: "", email: "" },
+                      ])
+                    }
+                    className="text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    + Agregar
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {guardians.map((g, i) => (
+                    <div key={i} className="grid gap-2 sm:grid-cols-2">
+                      <input
+                        required={i === 0}
+                        placeholder="Nombre *"
+                        value={g.name}
+                        onChange={(e) => setGuardian(i, "name", e.target.value)}
+                        className={inputClass}
+                      />
+                      <input
+                        placeholder="Parentesco (madre, padre…)"
+                        value={g.relationship}
+                        onChange={(e) =>
+                          setGuardian(i, "relationship", e.target.value)
+                        }
+                        className={inputClass}
+                      />
+                      <input
+                        placeholder="Teléfono"
+                        value={g.phone}
+                        onChange={(e) => setGuardian(i, "phone", e.target.value)}
+                        className={inputClass}
+                      />
+                      <input
+                        placeholder="Correo"
+                        value={g.email}
+                        onChange={(e) => setGuardian(i, "email", e.target.value)}
+                        className={inputClass}
+                      />
+                      {guardians.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setGuardians((gs) => gs.filter((_, idx) => idx !== i))
+                          }
+                          className="justify-self-start text-xs text-red-600 hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </>
           )}
 
@@ -217,11 +480,24 @@ function InscripcionInner() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass}>Contraseña *</label>
-              <input type="password" required value={form.password} onChange={(e) => set("password", e.target.value)} className={inputClass} placeholder="Mínimo 6 caracteres" />
+              <input
+                type="password"
+                required
+                value={form.password}
+                onChange={(e) => set("password", e.target.value)}
+                className={inputClass}
+                placeholder="Mínimo 6 caracteres"
+              />
             </div>
             <div>
               <label className={labelClass}>Confirmar *</label>
-              <input type="password" required value={form.confirm} onChange={(e) => set("confirm", e.target.value)} className={inputClass} />
+              <input
+                type="password"
+                required
+                value={form.confirm}
+                onChange={(e) => set("confirm", e.target.value)}
+                className={inputClass}
+              />
             </div>
           </div>
 
@@ -233,7 +509,7 @@ function InscripcionInner() {
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || photoBusy}
             className="w-full rounded-lg bg-brand-600 py-2.5 font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
           >
             {saving
