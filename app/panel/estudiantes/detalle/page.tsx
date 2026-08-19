@@ -14,6 +14,7 @@ import {
   STATUS_STYLES,
 } from "@/lib/labels";
 import type {
+  CuotaPlanItem,
   DocumentType,
   PaymentMethod,
   StudentAccount,
@@ -676,19 +677,18 @@ function CuotaPlanModal({
 }) {
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const [inscripcion, setInscripcion] = useState("400");
-  const [mensualidad, setMensualidad] = useState("850");
-  const [numCuotas, setNumCuotas] = useState("12");
-  const [tramite, setTramite] = useState("300");
+  const [items, setItems] = useState<CuotaPlanItem[] | null>(null);
   const [startMonth, setStartMonth] = useState(defaultMonth);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const nCuotas = Number(numCuotas) || 0;
-  const total =
-    (Number(inscripcion) || 0) +
-    (Number(mensualidad) || 0) * nCuotas +
-    (Number(tramite) || 0);
+  useEffect(() => {
+    api<{ items: CuotaPlanItem[] }>("/api/charges/plan-template")
+      .then((r) => setItems(r.items))
+      .catch(() => setItems([]));
+  }, []);
+
+  const total = (items ?? []).reduce((s, it) => s + it.amount, 0);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -697,22 +697,13 @@ function CuotaPlanModal({
     try {
       const r = await api<{ created: number }>(
         `/api/charges/student/${studentId}/plan`,
-        {
-          method: "POST",
-          body: {
-            inscripcion: Number(inscripcion) || 0,
-            mensualidad: Number(mensualidad) || 0,
-            numCuotas: nCuotas,
-            tramite: Number(tramite) || 0,
-            startMonth,
-          },
-        }
+        { method: "POST", body: { startMonth } }
       );
-      alert(`Plan generado: ${r.created} cuota(s) creadas.`);
+      alert(`Plan aplicado: ${r.created} cuota(s) creadas.`);
       onDone();
     } catch (err) {
       setError(
-        err instanceof ApiError ? err.message : "No se pudo generar el plan"
+        err instanceof ApiError ? err.message : "No se pudo aplicar el plan"
       );
     } finally {
       setBusy(false);
@@ -723,10 +714,17 @@ function CuotaPlanModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
         <h3 className="mb-1 text-lg font-bold text-brand-800">
-          Generar plan de cuotas
+          Aplicar plan de cuotas
         </h3>
         <p className="mb-4 text-sm text-gray-500">
-          Crea las cuotas del estudiante: Admisión + mensualidades + trámite.
+          Se crearán las cuotas del{" "}
+          <Link
+            href="/panel/plan-cuotas"
+            className="text-brand-600 hover:underline"
+          >
+            plan general
+          </Link>{" "}
+          para este estudiante. Solo elige el mes de inicio.
         </p>
 
         {error && (
@@ -736,49 +734,6 @@ function CuotaPlanModal({
         )}
 
         <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              <span className="mb-1 block text-gray-600">Admisión (Q)</span>
-              <input
-                type="number"
-                min={0}
-                value={inscripcion}
-                onChange={(e) => setInscripcion(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-gray-600">Mensualidad (Q)</span>
-              <input
-                type="number"
-                min={0}
-                value={mensualidad}
-                onChange={(e) => setMensualidad(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-gray-600"># de mensualidades</span>
-              <input
-                type="number"
-                min={1}
-                max={36}
-                value={numCuotas}
-                onChange={(e) => setNumCuotas(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-gray-600">Trámite (Q)</span>
-              <input
-                type="number"
-                min={0}
-                value={tramite}
-                onChange={(e) => setTramite(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
           <label className="block text-sm">
             <span className="mb-1 block text-gray-600">Mes de inicio</span>
             <input
@@ -789,12 +744,39 @@ function CuotaPlanModal({
             />
           </label>
 
+          {/* Vista previa del plan general */}
+          {items === null ? (
+            <p className="text-sm text-gray-400">Cargando plan…</p>
+          ) : items.length === 0 ? (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              El plan general está vacío.{" "}
+              <Link href="/panel/plan-cuotas" className="underline">
+                Configúralo aquí
+              </Link>
+              .
+            </p>
+          ) : (
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-200">
+              <ul className="divide-y divide-gray-100 text-sm">
+                {items.map((it) => (
+                  <li
+                    key={it.id}
+                    className="flex items-center justify-between px-3 py-1.5"
+                  >
+                    <span className="text-gray-700">{it.concept}</span>
+                    <span className="text-gray-500">{formatGTQ(it.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <p className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600">
             Total del plan:{" "}
             <span className="font-semibold text-gray-800">
               {formatGTQ(total)}
             </span>{" "}
-            en {nCuotas > 0 ? nCuotas + 1 : 1} cargo(s) aprox.
+            en {items?.length ?? 0} cuota(s).
           </p>
 
           <div className="flex justify-end gap-2 pt-1">
@@ -807,10 +789,10 @@ function CuotaPlanModal({
             </button>
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || (items?.length ?? 0) === 0}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
             >
-              {busy ? "Generando…" : "Generar plan"}
+              {busy ? "Aplicando…" : "Aplicar plan"}
             </button>
           </div>
         </form>

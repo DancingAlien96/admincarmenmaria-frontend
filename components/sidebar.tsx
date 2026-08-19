@@ -185,6 +185,17 @@ export function Sidebar() {
               >
                 Documentos requeridos
               </Link>
+              <Link
+                href="/panel/plan-cuotas"
+                className={[
+                  "flex items-center rounded-lg px-3 py-2 text-sm transition",
+                  pathname.startsWith("/panel/plan-cuotas")
+                    ? "bg-white/15 font-medium"
+                    : "text-brand-100/80 hover:bg-white/10",
+                ].join(" ")}
+              >
+                Plan de cuotas
+              </Link>
             </>
           )}
         </nav>

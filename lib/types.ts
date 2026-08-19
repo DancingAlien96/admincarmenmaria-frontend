@@ -97,6 +97,15 @@ export interface StudentChecklist {
   total: number;
 }
 
+export interface CuotaPlanItem {
+  id: string;
+  concept: string;
+  amount: number;
+  monthOffset: number;
+  order: number;
+  active: boolean;
+}
+
 export interface AdminCharge {
   id: string;
   concept: string;
