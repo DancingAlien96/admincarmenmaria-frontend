@@ -54,7 +54,12 @@ export interface PortalDashboard {
   grades: { acta: string; fase: string; date: string; nota: string }[];
 }
 
-export type CuotaEstado = "pagado" | "vencido" | "parcial" | "pendiente";
+export type CuotaEstado =
+  | "pagado"
+  | "vencido"
+  | "parcial"
+  | "pendiente"
+  | "en_revision";
 
 export interface PortalCuota {
   id: string;
@@ -203,6 +208,21 @@ export interface FaseItem {
 export interface StudentFases {
   fases: FaseItem[];
   promedioGeneral: number | null;
+}
+
+export interface PendingBoleta {
+  id: string;
+  concept: string;
+  amount: number;
+  method: string;
+  paidAt: string;
+  receiptUrl: string | null;
+  student: {
+    id: string;
+    fullName: string;
+    expedienteNumber: string | null;
+    sede: string | null;
+  } | null;
 }
 
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";

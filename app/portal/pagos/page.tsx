@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { api, ApiError, apiUrl } from "@/lib/api";
 import { formatGTQ } from "@/lib/labels";
-import type { CuotaEstado, PortalCuotas } from "@/lib/types";
+import type { CuotaEstado, PortalCuota, PortalCuotas } from "@/lib/types";
 
 const ESTADO_META: Record<
   CuotaEstado,
@@ -18,6 +18,11 @@ const ESTADO_META: Record<
     label: "Pago parcial",
     badge: "bg-blue-50 text-blue-700 border-blue-200",
     dot: "bg-blue-500",
+  },
+  en_revision: {
+    label: "En revisión",
+    badge: "bg-amber-50 text-amber-700 border-amber-200",
+    dot: "bg-amber-500",
   },
   vencido: {
     label: "Vencido",
@@ -44,11 +49,14 @@ function fmtFecha(iso: string) {
 export default function PortalPagosPage() {
   const [data, setData] = useState<PortalCuotas | null>(null);
   const [loading, setLoading] = useState(true);
+  const [boletaFor, setBoletaFor] = useState<PortalCuota | null>(null);
+
+  async function reload() {
+    setData(await api<PortalCuotas>("/api/portal/cuotas"));
+  }
 
   useEffect(() => {
-    api<PortalCuotas>("/api/portal/cuotas")
-      .then(setData)
-      .finally(() => setLoading(false));
+    reload().finally(() => setLoading(false));
   }, []);
 
   if (loading || !data) {
@@ -158,6 +166,16 @@ export default function PortalPagosPage() {
                           Saldo: {formatGTQ(c.saldo)}
                         </p>
                       )}
+                      {(c.estado === "pendiente" ||
+                        c.estado === "vencido" ||
+                        c.estado === "parcial") && (
+                        <button
+                          onClick={() => setBoletaFor(c)}
+                          className="mt-1 rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
+                        >
+                          Subir boleta
+                        </button>
+                      )}
                     </div>
                   </li>
                 );
@@ -166,12 +184,153 @@ export default function PortalPagosPage() {
           </div>
 
           <p className="mt-4 text-xs text-gray-400">
-            ¿Ya pagaste una cuota y aparece pendiente? Los pagos se reflejan
-            cuando la administración los registra. Si tienes dudas, comunícate
-            con la escuela.
+            Sube la boleta de tu transferencia bancaria en la cuota
+            correspondiente. Quedará <strong>en revisión</strong> hasta que la
+            escuela la apruebe.
           </p>
         </>
       )}
+
+      {boletaFor && (
+        <BoletaModal
+          cuota={boletaFor}
+          onClose={() => setBoletaFor(null)}
+          onDone={async () => {
+            setBoletaFor(null);
+            await reload();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function BoletaModal({
+  cuota,
+  onClose,
+  onDone,
+}: {
+  cuota: PortalCuota;
+  onClose: () => void;
+  onDone: () => void | Promise<void>;
+}) {
+  const [amount, setAmount] = useState(String(cuota.saldo || cuota.amount));
+  const [method, setMethod] = useState("TRANSFERENCIA");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!file) {
+      setError("Adjunta la foto o PDF de tu boleta.");
+      return;
+    }
+    setBusy(true);
+    try {
+      // 1) Sube el archivo (con la sesión del alumno).
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch(`${apiUrl}/api/uploads`, {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (!up.ok) throw new Error("No se pudo subir el archivo");
+      const stored = (await up.json()) as { url: string; key: string };
+      // 2) Registra la boleta en revisión.
+      await api(`/api/portal/cuotas/${cuota.id}/boleta`, {
+        method: "POST",
+        body: {
+          amount: Number(amount) || 0,
+          method,
+          receiptUrl: stored.url,
+          receiptKey: stored.key,
+        },
+      });
+      await onDone();
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "No se pudo enviar la boleta"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <h3 className="mb-1 text-lg font-bold text-brand-800">Subir boleta</h3>
+        <p className="mb-4 text-sm text-gray-500">
+          {cuota.concept} · adjunta tu comprobante de transferencia. Quedará en
+          revisión.
+        </p>
+        {error && (
+          <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        <form onSubmit={submit} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              <span className="mb-1 block text-gray-600">Monto (Q)</span>
+              <input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block text-gray-600">Método</span>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="DEPOSITO">Depósito</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-gray-600">
+              Boleta (foto o PDF)
+            </label>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,application/pdf"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="text-sm"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              {busy ? "Enviando…" : "Enviar boleta"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

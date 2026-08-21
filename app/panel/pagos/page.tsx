@@ -150,6 +150,8 @@ export default function PaymentsPage() {
         </p>
       )}
 
+      {canEdit && <BoletasReview onChange={load} />}
+
       {/* Resumen de totales */}
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <SummaryCard
@@ -443,6 +445,114 @@ export default function PaymentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function BoletasReview({ onChange }: { onChange: () => void }) {
+  const [items, setItems] = useState<import("@/lib/types").PendingBoleta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const r = await api<{ payments: import("@/lib/types").PendingBoleta[] }>(
+      "/api/payments/pending"
+    );
+    setItems(r.payments);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function aprobar(id: string) {
+    setBusyId(id);
+    try {
+      await api(`/api/payments/${id}/approve`, { method: "POST" });
+      await load();
+      onChange();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo aprobar");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function rechazar(id: string) {
+    const reason = prompt("Motivo del rechazo (opcional):") ?? "";
+    setBusyId(id);
+    try {
+      await api(`/api/payments/${id}/reject`, {
+        method: "POST",
+        body: { reason },
+      });
+      await load();
+      onChange();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo rechazar");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  if (loading || items.length === 0) return null;
+
+  return (
+    <section className="mb-6 rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+      <h2 className="mb-1 font-semibold text-amber-800">
+        Boletas por revisar ({items.length})
+      </h2>
+      <p className="mb-4 text-sm text-gray-600">
+        Comprobantes subidos por los estudiantes. Revisa la boleta y aprueba o
+        rechaza.
+      </p>
+      <ul className="space-y-2">
+        {items.map((b) => (
+          <li
+            key={b.id}
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-white px-4 py-3"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-gray-800">
+                {b.student?.fullName ?? "—"}
+              </p>
+              <p className="text-xs text-gray-500">
+                {[b.student?.expedienteNumber, b.concept]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </div>
+            <span className="font-semibold text-gray-800">
+              {formatGTQ(b.amount)}
+            </span>
+            {b.receiptUrl && (
+              <a
+                href={b.receiptUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Ver boleta
+              </a>
+            )}
+            <button
+              onClick={() => void aprobar(b.id)}
+              disabled={busyId === b.id}
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
+            >
+              Aprobar
+            </button>
+            <button
+              onClick={() => void rechazar(b.id)}
+              disabled={busyId === b.id}
+              className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+            >
+              Rechazar
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
