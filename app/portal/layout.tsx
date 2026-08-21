@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 
 const NAV = [
   { href: "/portal", label: "Dashboard" },
   { href: "/portal/pagos", label: "Pagos" },
   { href: "/portal/documentos", label: "Documentación" },
+  { href: "/portal/notificaciones", label: "Notificaciones" },
   { href: "/portal/cuenta", label: "Cambiar contraseña" },
 ];
 
@@ -21,6 +23,7 @@ export default function PortalLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
     if (loading) return;
@@ -28,6 +31,14 @@ export default function PortalLayout({
     // Solo estudiantes usan el portal; el resto va al panel.
     else if (user.role !== "ESTUDIANTE") router.replace("/panel");
   }, [user, loading, router]);
+
+  // Conteo de notificaciones para el badge del menú.
+  useEffect(() => {
+    if (user?.role !== "ESTUDIANTE") return;
+    api<{ total: number }>("/api/portal/notificaciones")
+      .then((r) => setNotifCount(r.total))
+      .catch(() => setNotifCount(0));
+  }, [user?.role, pathname]);
 
   // Cierra el cajón al navegar (en móvil)
   useEffect(() => {
@@ -138,13 +149,18 @@ export default function PortalLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-lg px-3 py-2 text-sm transition ${
+                className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm transition ${
                   active
                     ? "bg-brand-50 font-medium text-brand-700"
                     : "text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.href === "/portal/notificaciones" && notifCount > 0 && (
+                  <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold text-white">
+                    {notifCount}
+                  </span>
+                )}
               </Link>
             );
           })}

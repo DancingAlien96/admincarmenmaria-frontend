@@ -128,6 +128,21 @@ export interface StudentAccount {
   };
 }
 
+export interface PortalNotif {
+  id: string;
+  tipo: "pago" | "documento";
+  titulo: string;
+  detalle: string;
+  fecha: string | null;
+  prioridad: "alta" | "media" | "baja";
+}
+
+export interface PortalNotifs {
+  items: PortalNotif[];
+  total: number;
+  altas: number;
+}
+
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
 
 export type DocumentType =
