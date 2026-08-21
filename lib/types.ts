@@ -143,6 +143,29 @@ export interface PortalNotifs {
   altas: number;
 }
 
+export interface Ebook {
+  id: string;
+  title: string;
+  description: string | null;
+  author: string | null;
+  category: string | null;
+  fileUrl: string;
+  coverUrl: string | null;
+  sizeLabel: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+export const EBOOK_CATEGORIES = [
+  "Anatomía y Fisiología",
+  "Farmacología",
+  "Cuidados de Enfermería",
+  "Primeros Auxilios",
+  "Ética y Legislación",
+  "Procedimientos Clínicos",
+  "General",
+];
+
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
 
 export type DocumentType =

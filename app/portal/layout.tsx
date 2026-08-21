@@ -10,6 +10,7 @@ const NAV = [
   { href: "/portal", label: "Dashboard" },
   { href: "/portal/pagos", label: "Pagos" },
   { href: "/portal/documentos", label: "Documentación" },
+  { href: "/portal/ebooks", label: "Biblioteca" },
   { href: "/portal/notificaciones", label: "Notificaciones" },
   { href: "/portal/cuenta", label: "Cambiar contraseña" },
 ];
