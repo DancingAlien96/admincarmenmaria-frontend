@@ -16,12 +16,15 @@ import {
 import type {
   CuotaPlanItem,
   DocumentType,
+  GradeCategory,
   PaymentMethod,
   StudentAccount,
   StudentChecklist,
   StudentDetail,
+  StudentFases,
   StudentStatus,
 } from "@/lib/types";
+import { GRADE_CATEGORY_LABELS } from "@/lib/types";
 import {
   StudentForm,
   type StudentFormValues,
@@ -285,6 +288,7 @@ function StudentDetailInner() {
               />
             )}
             <ChecklistCard studentId={id} canEdit={canEdit} />
+            <FasesCard studentId={id} canEdit={user?.role === "ADMIN"} />
             <DocumentsCard
               student={student}
               canEdit={canEdit}
@@ -525,6 +529,227 @@ function RegistrarPagoInline({
         {busy ? "Guardando…" : "Registrar"}
       </button>
     </form>
+  );
+}
+
+const GRADE_CATS: GradeCategory[] = [
+  "TAREA",
+  "PRIMER_PARCIAL",
+  "SEGUNDO_PARCIAL",
+  "EXAMEN_FINAL",
+  "RECUPERACION",
+];
+
+function FasesCard({
+  studentId,
+  canEdit,
+}: {
+  studentId: string;
+  canEdit: boolean;
+}) {
+  const [data, setData] = useState<StudentFases | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [fase, setFase] = useState("1");
+  const [category, setCategory] = useState<GradeCategory>("TAREA");
+  const [name, setName] = useState("");
+  const [score, setScore] = useState("");
+  const [maxScore, setMaxScore] = useState("100");
+  const [date, setDate] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const reload = useCallback(async () => {
+    setData(await api<StudentFases>(`/api/grades/student/${studentId}`));
+  }, [studentId]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  async function agregar(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api("/api/grades", {
+        method: "POST",
+        body: {
+          studentId,
+          fase: Number(fase),
+          category,
+          name,
+          score: Number(score),
+          maxScore: Number(maxScore) || 100,
+          date: date || null,
+        },
+      });
+      setName("");
+      setScore("");
+      setDate("");
+      await reload();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function eliminar(id: string) {
+    try {
+      await api(`/api/grades/${id}`, { method: "DELETE" });
+      await reload();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo eliminar");
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-semibold text-brand-800">Calificaciones (Fases)</h2>
+        {data?.promedioGeneral !== null && data?.promedioGeneral !== undefined && (
+          <span className="text-sm text-gray-500">
+            Promedio general: {data.promedioGeneral}
+          </span>
+        )}
+      </div>
+
+      {!data ? (
+        <p className="text-sm text-gray-400">Cargando…</p>
+      ) : (
+        <div className="space-y-4">
+          {data.fases.map((f) => (
+            <div key={f.fase}>
+              <div className="mb-1 flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-700">
+                  {f.nombre}{" "}
+                  <span className="text-xs font-normal text-gray-400">
+                    · {f.subtitulo}
+                  </span>
+                </p>
+                {f.promedio !== null && (
+                  <span className="text-sm text-gray-500">{f.promedio}</span>
+                )}
+              </div>
+              {f.items.length === 0 ? (
+                <p className="text-xs text-gray-400">Sin calificaciones.</p>
+              ) : (
+                <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                  {f.items.map((it) => (
+                    <li
+                      key={it.id}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-gray-700">{it.name}</p>
+                        <p className="text-[11px] text-gray-400">
+                          {GRADE_CATEGORY_LABELS[it.category]}
+                        </p>
+                      </div>
+                      <span className="font-medium text-gray-800">
+                        {it.score}/{it.maxScore}
+                      </span>
+                      {canEdit && (
+                        <button
+                          onClick={() => void eliminar(it.id)}
+                          className="text-xs text-red-600 hover:underline"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canEdit && (
+        <div className="mt-4 border-t border-gray-100 pt-4">
+          {!adding ? (
+            <button
+              onClick={() => setAdding(true)}
+              className="text-sm font-medium text-brand-600 hover:underline"
+            >
+              + Agregar calificación
+            </button>
+          ) : (
+            <form onSubmit={agregar} className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={fase}
+                  onChange={(e) => setFase(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                >
+                  <option value="1">Fase I</option>
+                  <option value="2">Fase II</option>
+                  <option value="3">Fase III</option>
+                </select>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as GradeCategory)}
+                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                >
+                  {GRADE_CATS.map((c) => (
+                    <option key={c} value={c}>
+                      {GRADE_CATEGORY_LABELS[c]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nombre (ej. Ensayo, Primer parcial…)"
+                required
+                className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={score}
+                  onChange={(e) => setScore(e.target.value)}
+                  placeholder="Nota"
+                  required
+                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  value={maxScore}
+                  onChange={(e) => setMaxScore(e.target.value)}
+                  placeholder="Máx."
+                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                />
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                >
+                  {busy ? "Guardando…" : "Guardar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAdding(false)}
+                  className="text-sm text-gray-500"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -166,6 +166,45 @@ export const EBOOK_CATEGORIES = [
   "General",
 ];
 
+export type GradeCategory =
+  | "TAREA"
+  | "PRIMER_PARCIAL"
+  | "SEGUNDO_PARCIAL"
+  | "EXAMEN_FINAL"
+  | "RECUPERACION";
+
+export const GRADE_CATEGORY_LABELS: Record<GradeCategory, string> = {
+  TAREA: "Tarea",
+  PRIMER_PARCIAL: "Primer parcial",
+  SEGUNDO_PARCIAL: "Segundo parcial",
+  EXAMEN_FINAL: "Examen final",
+  RECUPERACION: "Recuperación",
+};
+
+export interface GradeItem {
+  id: string;
+  category: GradeCategory;
+  name: string;
+  score: number;
+  maxScore: number;
+  pct: number;
+  date: string | null;
+}
+
+export interface FaseItem {
+  fase: number;
+  nombre: string;
+  subtitulo: string;
+  items: GradeItem[];
+  promedio: number | null;
+  estado: "completado" | "en-progreso" | "pendiente";
+}
+
+export interface StudentFases {
+  fases: FaseItem[];
+  promedioGeneral: number | null;
+}
+
 export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
 
 export type DocumentType =
