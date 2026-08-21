@@ -21,6 +21,70 @@ const KIND_LABELS: Record<string, string> = {
   documento: "Documento",
 };
 
+function EmailTestCard() {
+  const [to, setTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function enviar() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await api("/api/whatsapp/test-email", { method: "POST", body: { to } });
+      setMsg({ ok: true, text: `Correo de prueba enviado a ${to}. Revisa la bandeja (y spam).` });
+    } catch (err) {
+      setMsg({
+        ok: false,
+        text: err instanceof ApiError ? err.message : "No se pudo enviar el correo.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <h2 className="mb-1 font-semibold text-brand-800">Correo electrónico</h2>
+      <p className="mb-4 text-sm text-gray-500">
+        Envía un correo de prueba para verificar que el sistema puede mandar
+        correos (bienvenida al Campus, avisos, etc.).
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="flex-1">
+          <label className="mb-1 block text-sm text-gray-600">
+            Correo de destino
+          </label>
+          <input
+            type="email"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            placeholder="tucorreo@ejemplo.com"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <button
+          onClick={() => void enviar()}
+          disabled={busy || !to}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        >
+          {busy ? "Enviando…" : "Enviar prueba"}
+        </button>
+      </div>
+      {msg && (
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+            msg.ok
+              ? "bg-green-50 text-green-700"
+              : "bg-red-50 text-red-700"
+          }`}
+        >
+          {msg.text}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function RemindersPage() {
   const { user } = useAuth();
   const canEdit = canAccess(user, "REMINDERS", "EDITOR");
@@ -35,6 +99,7 @@ export default function RemindersPage() {
       </div>
 
       <div className="space-y-6">
+        {canEdit && <EmailTestCard />}
         {canEdit && <BotConfigCard />}
         {canEdit && <BulkSendCard />}
         {canEdit && <ManualSendCard />}
