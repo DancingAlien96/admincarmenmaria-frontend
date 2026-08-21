@@ -85,6 +85,163 @@ function EmailTestCard() {
   );
 }
 
+function BulkEmailCard() {
+  const nowY = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => nowY + 1 - i);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [year, setYear] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function enviar() {
+    if (
+      !confirm(
+        year
+          ? `Se enviará el correo a todos los estudiantes activos de la promoción ${year}. ¿Continuar?`
+          : "Se enviará el correo a TODOS los estudiantes activos con correo. ¿Continuar?"
+      )
+    )
+      return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await api<{ total: number; sent: number; skipped: number }>(
+        "/api/whatsapp/bulk-email",
+        {
+          method: "POST",
+          body: { subject, message, year: year ? Number(year) : undefined },
+        }
+      );
+      setMsg({
+        ok: true,
+        text: `Enviados ${r.sent} de ${r.total} (${r.skipped} sin correo o con error).`,
+      });
+      setSubject("");
+      setMessage("");
+    } catch (err) {
+      setMsg({
+        ok: false,
+        text: err instanceof ApiError ? err.message : "No se pudo enviar.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <h2 className="mb-1 font-semibold text-brand-800">Correo masivo</h2>
+      <p className="mb-4 text-sm text-gray-500">
+        Envía un aviso por correo a todos los estudiantes o a una promoción
+        (inicio de clases, reunión, requisitos, etc.).
+      </p>
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3">
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Asunto"
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          <select
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          >
+            <option value="">Todos los activos</option>
+            {years.map((y) => (
+              <option key={y} value={y}>
+                Promoción {y}
+              </option>
+            ))}
+          </select>
+        </div>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Escribe el mensaje…"
+          rows={4}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        <button
+          onClick={() => void enviar()}
+          disabled={busy || !subject.trim() || !message.trim()}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        >
+          {busy ? "Enviando…" : "Enviar correo masivo"}
+        </button>
+        {msg && (
+          <p
+            className={`rounded-lg px-3 py-2 text-sm ${
+              msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+            }`}
+          >
+            {msg.text}
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function EmailRemindersCard() {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function correr() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await api<{ checked: number; sent: number; skipped: number }>(
+        "/api/whatsapp/run-email-reminders",
+        { method: "POST" }
+      );
+      setMsg({
+        ok: true,
+        text: `Listo: ${r.sent} recordatorio(s) enviados (${r.checked} cuotas revisadas).`,
+      });
+    } catch (err) {
+      setMsg({
+        ok: false,
+        text: err instanceof ApiError ? err.message : "No se pudo ejecutar.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <h2 className="mb-1 font-semibold text-brand-800">
+        Recordatorios de cuotas por correo
+      </h2>
+      <p className="mb-4 text-sm text-gray-500">
+        El sistema envía solo, cada día, un correo a los estudiantes con cuota{" "}
+        <strong>por vencer</strong> (5 días antes y el día) o{" "}
+        <strong>en mora</strong> (3 y 7 días después). Aquí puedes ejecutarlo
+        manualmente ahora.
+      </p>
+      <button
+        onClick={() => void correr()}
+        disabled={busy}
+        className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+      >
+        {busy ? "Enviando…" : "Enviar recordatorios ahora"}
+      </button>
+      {msg && (
+        <p
+          className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+            msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+          }`}
+        >
+          {msg.text}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function RemindersPage() {
   const { user } = useAuth();
   const canEdit = canAccess(user, "REMINDERS", "EDITOR");
@@ -100,6 +257,8 @@ export default function RemindersPage() {
 
       <div className="space-y-6">
         {canEdit && <EmailTestCard />}
+        {canEdit && <BulkEmailCard />}
+        {canEdit && <EmailRemindersCard />}
         {canEdit && <BotConfigCard />}
         {canEdit && <BulkSendCard />}
         {canEdit && <ManualSendCard />}
