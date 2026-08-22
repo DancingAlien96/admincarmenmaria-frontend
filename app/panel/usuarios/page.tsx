@@ -95,7 +95,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{u.email}</td>
                   <td className="px-4 py-3">
-                    {u.role === "ADMIN" ? "Administrador" : "Personal"}
+                    {u.role === "ADMIN" ? "Administrador" : u.role === "DOCENTE" ? "Docente" : "Personal"}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
                     {u.role === "ADMIN"
@@ -166,7 +166,7 @@ export default function UsersPage() {
               </div>
               <p className="mt-2 text-xs text-gray-500">
                 <span className="font-medium text-gray-700">
-                  {u.role === "ADMIN" ? "Administrador" : "Personal"}
+                  {u.role === "ADMIN" ? "Administrador" : u.role === "DOCENTE" ? "Docente" : "Personal"}
                 </span>
                 {" · "}
                 {u.role === "ADMIN"
@@ -204,6 +204,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => Promise<void> }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"STAFF" | "DOCENTE" | "ADMIN">("STAFF");
   const [perms, setPerms] = useState<Record<string, PermissionLevel | "NONE">>(
     Object.fromEntries(SECTIONS.map((s) => [s, "NONE"]))
   );
@@ -215,12 +216,16 @@ function CreateUserForm({ onCreated }: { onCreated: () => Promise<void> }) {
     setError(null);
     setSaving(true);
     try {
-      const permissions = SECTIONS.filter((s) => perms[s] !== "NONE").map(
-        (s) => ({ section: s, level: perms[s] as PermissionLevel })
-      );
+      const permissions =
+        role === "STAFF"
+          ? SECTIONS.filter((s) => perms[s] !== "NONE").map((s) => ({
+              section: s,
+              level: perms[s] as PermissionLevel,
+            }))
+          : [];
       await api("/api/users", {
         method: "POST",
-        body: { name, email, password, role: "STAFF", permissions },
+        body: { name, email, password, role, permissions },
       });
       await onCreated();
     } catch (err) {
@@ -266,11 +271,30 @@ function CreateUserForm({ onCreated }: { onCreated: () => Promise<void> }) {
         />
       </div>
 
-      <h3 className="mb-2 mt-5 text-sm font-semibold text-brand-800">
-        Permisos por módulo
-      </h3>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {SECTIONS.map((s) => (
+      <div className="mt-3">
+        <label className="mb-1 block text-sm font-medium text-gray-700">
+          Rol
+        </label>
+        <select
+          value={role}
+          onChange={(e) =>
+            setRole(e.target.value as "STAFF" | "DOCENTE" | "ADMIN")
+          }
+          className={inputClass}
+        >
+          <option value="STAFF">Personal (permisos por módulo)</option>
+          <option value="DOCENTE">Docente (ingresa calificaciones)</option>
+          <option value="ADMIN">Administrador (acceso total)</option>
+        </select>
+      </div>
+
+      {role === "STAFF" && (
+        <>
+          <h3 className="mb-2 mt-5 text-sm font-semibold text-brand-800">
+            Permisos por módulo
+          </h3>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {SECTIONS.map((s) => (
           <div
             key={s}
             className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
@@ -291,8 +315,10 @@ function CreateUserForm({ onCreated }: { onCreated: () => Promise<void> }) {
               <option value="EDITOR">Editor</option>
             </select>
           </div>
-        ))}
-      </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {error && (
         <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

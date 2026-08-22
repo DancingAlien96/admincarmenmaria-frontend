@@ -13,10 +13,16 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Cada rol va a su lugar: los estudiantes al portal, el resto al panel.
+  // Cada rol va a su lugar: estudiante → portal, docente → su portal, resto → panel.
   useEffect(() => {
     if (!loading && user) {
-      router.replace(user.role === "ESTUDIANTE" ? "/portal" : "/panel");
+      const dest =
+        user.role === "ESTUDIANTE"
+          ? "/portal"
+          : user.role === "DOCENTE"
+            ? "/docente"
+            : "/panel";
+      router.replace(dest);
     }
   }, [user, loading, router]);
 

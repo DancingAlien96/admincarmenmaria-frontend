@@ -18,9 +18,11 @@ export default function PanelLayout({
     if (!user) router.replace("/login");
     // Un estudiante no accede al panel administrativo; va a su portal.
     else if (user.role === "ESTUDIANTE") router.replace("/portal");
+    // Un docente va a su propio portal.
+    else if (user.role === "DOCENTE") router.replace("/docente");
   }, [user, loading, router]);
 
-  if (loading || !user || user.role === "ESTUDIANTE") {
+  if (loading || !user || user.role === "ESTUDIANTE" || user.role === "DOCENTE") {
     return (
       <div className="flex min-h-screen items-center justify-center text-brand-700">
         Cargando…
