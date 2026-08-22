@@ -173,7 +173,7 @@ export default function PortalPagosPage() {
                           onClick={() => setBoletaFor(c)}
                           className="mt-1 rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
                         >
-                          Subir boleta
+                          Registrar Pago
                         </button>
                       )}
                     </div>
@@ -192,8 +192,9 @@ export default function PortalPagosPage() {
       )}
 
       {boletaFor && (
-        <BoletaModal
+        <RegistrarPagoModal
           cuota={boletaFor}
+          cardEnabled={data.cardEnabled}
           onClose={() => setBoletaFor(null)}
           onDone={async () => {
             setBoletaFor(null);
@@ -205,15 +206,20 @@ export default function PortalPagosPage() {
   );
 }
 
-function BoletaModal({
+function RegistrarPagoModal({
   cuota,
+  cardEnabled,
   onClose,
   onDone,
 }: {
   cuota: PortalCuota;
+  cardEnabled: boolean;
   onClose: () => void;
   onDone: () => void | Promise<void>;
 }) {
+  const [mode, setMode] = useState<"choose" | "transfer">(
+    cardEnabled ? "choose" : "transfer"
+  );
   const [amount, setAmount] = useState(String(cuota.saldo || cuota.amount));
   const [method, setMethod] = useState("TRANSFERENCIA");
   const [file, setFile] = useState<File | null>(null);
@@ -221,7 +227,25 @@ function BoletaModal({
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function submit(e: React.FormEvent) {
+  async function pagarTarjeta() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api<{ url: string }>(
+        `/api/portal/cuotas/${cuota.id}/pay-card`,
+        { method: "POST" }
+      );
+      // Redirige al checkout hospedado de Tilopay.
+      window.location.href = r.url;
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "No se pudo iniciar el pago"
+      );
+      setBusy(false);
+    }
+  }
+
+  async function enviarBoleta(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!file) {
@@ -230,7 +254,6 @@ function BoletaModal({
     }
     setBusy(true);
     try {
-      // 1) Sube el archivo (con la sesión del alumno).
       const fd = new FormData();
       fd.append("file", file);
       const up = await fetch(`${apiUrl}/api/uploads`, {
@@ -240,7 +263,6 @@ function BoletaModal({
       });
       if (!up.ok) throw new Error("No se pudo subir el archivo");
       const stored = (await up.json()) as { url: string; key: string };
-      // 2) Registra la boleta en revisión.
       await api(`/api/portal/cuotas/${cuota.id}/boleta`, {
         method: "POST",
         body: {
@@ -267,69 +289,128 @@ function BoletaModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h3 className="mb-1 text-lg font-bold text-brand-800">Subir boleta</h3>
+        <h3 className="mb-1 text-lg font-bold text-brand-800">Registrar pago</h3>
         <p className="mb-4 text-sm text-gray-500">
-          {cuota.concept} · adjunta tu comprobante de transferencia. Quedará en
-          revisión.
+          {cuota.concept} · {formatGTQ(cuota.saldo || cuota.amount)}
         </p>
+
         {error && (
           <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}
           </div>
         )}
-        <form onSubmit={submit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              <span className="mb-1 block text-gray-600">Monto (Q)</span>
-              <input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block text-gray-600">Método</span>
-              <select
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="TRANSFERENCIA">Transferencia</option>
-                <option value="DEPOSITO">Depósito</option>
-              </select>
-            </label>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-600">
-              Boleta (foto o PDF)
-            </label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*,application/pdf"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="text-sm"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
+
+        {mode === "choose" && (
+          <div className="space-y-3">
             <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
+              onClick={() => void pagarTarjeta()}
               disabled={busy}
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              className="flex w-full items-center gap-3 rounded-xl border border-brand-300 bg-brand-50 px-4 py-3 text-left hover:bg-brand-100 disabled:opacity-60"
             >
-              {busy ? "Enviando…" : "Enviar boleta"}
+              <span className="text-2xl">💳</span>
+              <span>
+                <span className="block font-medium text-brand-800">
+                  {busy ? "Abriendo pago seguro…" : "Pagar con tarjeta"}
+                </span>
+                <span className="block text-xs text-gray-500">
+                  Pago inmediato. La cuota queda pagada al aprobarse.
+                </span>
+              </span>
             </button>
+            <button
+              onClick={() => setMode("transfer")}
+              className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left hover:bg-gray-50"
+            >
+              <span className="text-2xl">🏦</span>
+              <span>
+                <span className="block font-medium text-gray-800">
+                  Transferencia bancaria
+                </span>
+                <span className="block text-xs text-gray-500">
+                  Sube tu boleta. Queda en revisión hasta que la escuela la
+                  apruebe.
+                </span>
+              </span>
+            </button>
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={onClose}
+                className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
-        </form>
+        )}
+
+        {mode === "transfer" && (
+          <form onSubmit={enviarBoleta} className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm">
+                <span className="mb-1 block text-gray-600">Monto (Q)</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-gray-600">Método</span>
+                <select
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="TRANSFERENCIA">Transferencia</option>
+                  <option value="DEPOSITO">Depósito</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">
+                Boleta (foto o PDF)
+              </label>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="text-sm"
+              />
+            </div>
+            <div className="flex justify-between gap-2 pt-1">
+              {cardEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => setMode("choose")}
+                  className="text-sm text-gray-500 hover:underline"
+                >
+                  ← Volver
+                </button>
+              ) : (
+                <span />
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+                >
+                  {busy ? "Enviando…" : "Enviar boleta"}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

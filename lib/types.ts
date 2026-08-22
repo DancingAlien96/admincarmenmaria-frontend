@@ -80,6 +80,7 @@ export interface PortalCuotas {
     overdueAmount: number;
   };
   progress: { pagadas: number; total: number };
+  cardEnabled: boolean;
 }
 
 export interface DocRequirement {
