@@ -211,6 +211,27 @@ export interface StudentFases {
   promedioGeneral: number | null;
 }
 
+export type FaseItemKind = "TAREA" | "ACTIVIDAD" | "EXAMEN" | "MATERIAL";
+
+export const FASE_ITEM_KIND_LABELS: Record<FaseItemKind, string> = {
+  TAREA: "Tarea",
+  ACTIVIDAD: "Actividad",
+  EXAMEN: "Examen",
+  MATERIAL: "Material",
+};
+
+export interface FaseContentItem {
+  id: string;
+  fase: number;
+  kind: FaseItemKind;
+  title: string;
+  description: string | null;
+  date: string | null;
+  meta: string | null;
+  fileUrl: string | null;
+  sizeLabel: string | null;
+}
+
 export interface PendingBoleta {
   id: string;
   concept: string;

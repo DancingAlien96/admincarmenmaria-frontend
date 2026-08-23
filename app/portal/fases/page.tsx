@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { GRADE_CATEGORY_LABELS, type FaseItem, type StudentFases } from "@/lib/types";
+import {
+  GRADE_CATEGORY_LABELS,
+  FASE_ITEM_KIND_LABELS,
+  type FaseContentItem,
+  type FaseItem,
+  type StudentFases,
+} from "@/lib/types";
 
 const ESTADO: Record<
   FaseItem["estado"],
@@ -20,13 +26,90 @@ function notaColor(pct: number) {
   return "text-red-600";
 }
 
+function FaseContenido({ items }: { items: FaseContentItem[] }) {
+  if (items.length === 0) return null;
+  const materiales = items.filter((i) => i.kind === "MATERIAL");
+  const academicos = items.filter((i) => i.kind !== "MATERIAL");
+
+  return (
+    <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-4">
+      {academicos.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+            Tareas, actividades y exámenes
+          </p>
+          <ul className="space-y-1.5">
+            {academicos.map((it) => (
+              <li key={it.id} className="flex items-start gap-2 text-sm">
+                <span className="mt-0.5 rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-medium text-brand-700">
+                  {FASE_ITEM_KIND_LABELS[it.kind]}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-gray-800">{it.title}</p>
+                  {(it.date || it.meta) && (
+                    <p className="text-xs text-gray-400">
+                      {[it.date ? it.date.slice(0, 10) : null, it.meta]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {materiales.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase text-gray-500">
+            Materiales
+          </p>
+          <ul className="space-y-1.5">
+            {materiales.map((it) => (
+              <li key={it.id} className="flex items-center gap-2 text-sm">
+                <span>📎</span>
+                <span className="min-w-0 flex-1 truncate text-gray-800">
+                  {it.title}
+                  {it.sizeLabel ? (
+                    <span className="text-xs text-gray-400"> · {it.sizeLabel}</span>
+                  ) : null}
+                </span>
+                {it.fileUrl && (
+                  <a
+                    href={it.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium text-brand-600 hover:underline"
+                  >
+                    Descargar
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PortalFasesPage() {
   const [data, setData] = useState<StudentFases | null>(null);
+  const [content, setContent] = useState<FaseContentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api<StudentFases>("/api/portal/fases")
-      .then(setData)
+    Promise.all([
+      api<StudentFases>("/api/portal/fases"),
+      api<{ items: FaseContentItem[] }>("/api/fase-content").catch(() => ({
+        items: [],
+      })),
+    ])
+      .then(([f, c]) => {
+        setData(f);
+        setContent(c.items);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -57,12 +140,12 @@ export default function PortalFasesPage() {
         )}
       </div>
 
-      {!hayNotas ? (
+      {!hayNotas && content.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <p className="text-3xl">🎓</p>
-          <p className="mt-2 text-gray-600">Aún no tienes calificaciones registradas.</p>
+          <p className="mt-2 text-gray-600">Aún no hay contenido en tus fases.</p>
           <p className="text-sm text-gray-400">
-            Aparecerán aquí conforme tus docentes las ingresen.
+            Tus docentes irán publicando tareas, materiales y calificaciones aquí.
           </p>
         </div>
       ) : (
@@ -128,6 +211,10 @@ export default function PortalFasesPage() {
                     ))}
                   </ul>
                 )}
+
+                <FaseContenido
+                  items={content.filter((c) => c.fase === f.fase)}
+                />
               </section>
             );
           })}
