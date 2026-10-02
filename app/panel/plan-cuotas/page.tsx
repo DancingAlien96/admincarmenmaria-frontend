@@ -17,6 +17,11 @@ export default function PlanCuotasPage() {
     concept: string;
     amount: string;
   } | null>(null);
+  // Diálogo para llevar un cambio del plan a las cuotas ya asignadas
+  const [propagar, setPropagar] = useState<{
+    id: string;
+    oldAmount: number | null;
+  } | null>(null);
 
   const load = useCallback(async () => {
     const r = await api<{ items: CuotaPlanItem[] }>(
@@ -58,6 +63,7 @@ export default function PlanCuotasPage() {
   }
 
   async function guardar(id: string, concept: string, amount: string) {
+    const prev = items?.find((i) => i.id === id);
     try {
       await api(`/api/charges/plan-template/${id}`, {
         method: "PATCH",
@@ -65,6 +71,16 @@ export default function PlanCuotasPage() {
       });
       setEdit(null);
       await load();
+      // Si cambió algo, preguntar si se aplica a las cuotas ya asignadas
+      if (
+        prev &&
+        (prev.amount !== Number(amount) || prev.concept !== concept.trim())
+      ) {
+        setPropagar({
+          id,
+          oldAmount: prev.amount !== Number(amount) ? prev.amount : null,
+        });
+      }
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "No se pudo guardar");
     }
@@ -90,8 +106,9 @@ export default function PlanCuotasPage() {
       <p className="mb-6 text-sm text-gray-500">
         Este es el plan de cuotas que se aplica a los estudiantes (Admisión,
         mensualidades y trámite). Defínelo una sola vez; luego lo aplicas a un
-        estudiante desde su expediente o a toda una cohorte aquí abajo. Editar
-        los montos NO cambia las cuotas ya generadas a estudiantes.
+        estudiante desde su expediente o a toda una cohorte aquí abajo. Al
+        cambiar un monto podrás elegir si también se actualizan las cuotas
+        pendientes ya asignadas (las pagadas nunca cambian).
       </p>
 
       {/* Agregar cuota */}
@@ -228,6 +245,15 @@ export default function PlanCuotasPage() {
                           Editar
                         </button>
                         <button
+                          onClick={() =>
+                            setPropagar({ id: it.id, oldAmount: null })
+                          }
+                          title="Aplicar el monto actual a las cuotas ya asignadas a estudiantes"
+                          className="mr-2 text-xs text-gray-600 hover:underline"
+                        >
+                          Asignadas
+                        </button>
+                        <button
                           onClick={() => void toggle(it)}
                           className={`text-xs hover:underline ${
                             it.active ? "text-red-600" : "text-green-600"
@@ -257,6 +283,262 @@ export default function PlanCuotasPage() {
       )}
 
       <ApplyCohort />
+
+      {propagar && (
+        <PropagateDialog
+          itemId={propagar.id}
+          oldAmount={propagar.oldAmount}
+          onClose={() => setPropagar(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface ImpactRow {
+  year: number | null;
+  pending: number;
+  overdue: number;
+  partial: number;
+  paid: number;
+}
+interface Impact {
+  item: CuotaPlanItem;
+  cohorts: ImpactRow[];
+  totals: Omit<ImpactRow, "year">;
+}
+
+// Pregunta si un cambio del plan se lleva a las cuotas ya asignadas.
+// Las cuotas pagadas o anuladas nunca se modifican.
+function PropagateDialog({
+  itemId,
+  oldAmount,
+  onClose,
+}: {
+  itemId: string;
+  oldAmount: number | null;
+  onClose: () => void;
+}) {
+  const [impact, setImpact] = useState<Impact | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [year, setYear] = useState<string>("all");
+  const [includeOverdue, setIncludeOverdue] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<Impact>(`/api/charges/plan-template/${itemId}/impact`)
+      .then(setImpact)
+      .catch((err) =>
+        setError(
+          err instanceof ApiError ? err.message : "No se pudo calcular el impacto"
+        )
+      );
+  }, [itemId]);
+
+  const affected = (impact?.cohorts ?? [])
+    .filter((r) => year === "all" || String(r.year) === year)
+    .reduce((s, r) => s + r.pending + (includeOverdue ? r.overdue : 0), 0);
+  const unpaidTotal = impact
+    ? impact.totals.pending + impact.totals.overdue
+    : 0;
+
+  async function aplicar() {
+    setBusy(true);
+    try {
+      const r = await api<{ updated: number; nowPaid: number }>(
+        `/api/charges/plan-template/${itemId}/propagate`,
+        {
+          method: "POST",
+          body: {
+            year: year === "all" ? null : Number(year),
+            onlyFuture: !includeOverdue,
+          },
+        }
+      );
+      setDone(
+        `Se actualizaron ${r.updated} cuota(s).` +
+          (r.nowPaid > 0
+            ? ` ${r.nowPaid} quedaron cubiertas por sus abonos y pasaron a pagadas.`
+            : "")
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo aplicar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const primaryBtn =
+    "rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+        <h3 className="mb-3 text-lg font-bold text-brand-800">
+          ¿Aplicar a cuotas ya asignadas?
+        </h3>
+
+        {error && (
+          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
+
+        {!impact && !error && (
+          <p className="text-sm text-gray-400">Calculando…</p>
+        )}
+
+        {!impact && error && (
+          <div className="flex justify-end">
+            <button onClick={onClose} className="text-sm text-gray-600">
+              Cerrar
+            </button>
+          </div>
+        )}
+
+        {impact && (
+          <div className="mb-4 rounded-lg bg-brand-50/60 px-4 py-3 text-sm">
+            <p className="font-medium text-gray-800">{impact.item.concept}</p>
+            <p className="text-gray-600">
+              {oldAmount !== null ? (
+                <>
+                  <span className="line-through">{formatGTQ(oldAmount)}</span>
+                  {" → "}
+                </>
+              ) : (
+                "Monto actual: "
+              )}
+              <span className="font-semibold text-brand-800">
+                {formatGTQ(impact.item.amount)}
+              </span>
+            </p>
+          </div>
+        )}
+
+        {impact && done && (
+          <>
+            <p className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+              {done}
+            </p>
+            <div className="flex justify-end">
+              <button onClick={onClose} className={primaryBtn}>
+                Listo
+              </button>
+            </div>
+          </>
+        )}
+
+        {impact && !done && unpaidTotal === 0 && (
+          <>
+            <p className="mb-4 text-sm text-gray-600">
+              Ningún estudiante tiene esta cuota pendiente de pago. El cambio
+              se usará en las próximas asignaciones.
+              {impact.totals.paid > 0 &&
+                ` (${impact.totals.paid} ya pagada(s), no se modifican.)`}
+            </p>
+            <div className="flex justify-end">
+              <button onClick={onClose} className={primaryBtn}>
+                Entendido
+              </button>
+            </div>
+          </>
+        )}
+
+        {impact && !done && unpaidTotal > 0 && (
+          <>
+            <p className="mb-3 text-sm text-gray-600">
+              Esta cuota ya está asignada a estudiantes. Las cuotas{" "}
+              <b>pagadas</b> nunca se modifican.
+            </p>
+
+            <table className="mb-4 w-full text-sm">
+              <thead className="text-left text-xs uppercase text-gray-500">
+                <tr>
+                  <th className="py-1">Promoción</th>
+                  <th className="py-1 text-right">Por vencer</th>
+                  <th className="py-1 text-right">Vencidas</th>
+                  <th className="py-1 text-right">Pagadas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {impact.cohorts.map((r) => (
+                  <tr
+                    key={String(r.year)}
+                    className={
+                      year === "all" || String(r.year) === year
+                        ? "text-gray-700"
+                        : "text-gray-300"
+                    }
+                  >
+                    <td className="py-1.5">{r.year ?? "Sin año"}</td>
+                    <td className="py-1.5 text-right">{r.pending}</td>
+                    <td className="py-1.5 text-right">{r.overdue}</td>
+                    <td className="py-1.5 text-right">{r.paid}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="mb-4 space-y-3 text-sm">
+              <label className="block">
+                <span className="mb-1 block text-gray-600">Aplicar a</span>
+                <select
+                  value={year}
+                  onChange={(e) => setYear(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                >
+                  <option value="all">Todas las promociones</option>
+                  {impact.cohorts
+                    .filter((r) => r.year !== null)
+                    .map((r) => (
+                      <option key={r.year} value={String(r.year)}>
+                        Promoción {r.year}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={includeOverdue}
+                  onChange={(e) => setIncludeOverdue(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span className="text-gray-700">
+                  Incluir cuotas ya vencidas
+                  <span className="block text-xs text-gray-500">
+                    Por defecto solo se ajustan las que aún no vencen.
+                  </span>
+                </span>
+              </label>
+              {impact.totals.partial > 0 && (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {impact.totals.partial} cuota(s) tienen abonos parciales: se
+                  conserva lo abonado y se ajusta el saldo.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                onClick={onClose}
+                disabled={busy}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Solo nuevas asignaciones
+              </button>
+              <button
+                onClick={() => void aplicar()}
+                disabled={busy || affected === 0}
+                className={primaryBtn}
+              >
+                {busy ? "Actualizando…" : `Actualizar ${affected} cuota(s)`}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
