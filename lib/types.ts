@@ -122,6 +122,19 @@ export interface AdminCharge {
   paid: number;
   saldo: number;
   overdue: boolean;
+  // Pagos aplicados a la cuota (aprobados) y boletas en revisión
+  payments?: ChargePayment[];
+}
+
+export interface ChargePayment {
+  id: string;
+  amount: number;
+  discount: number;
+  method: PaymentMethod;
+  source: PaymentSource;
+  status: "ACTIVO" | "EN_REVISION";
+  paidAt: string;
+  receiptUrl: string | null;
 }
 
 export interface StudentAccount {
@@ -239,6 +252,7 @@ export interface PendingBoleta {
   method: string;
   paidAt: string;
   receiptUrl: string | null;
+  chargeId?: string | null;
   student: {
     id: string;
     fullName: string;
@@ -276,7 +290,7 @@ export interface StudentListItem {
   sede: string | null;
   phonePrimary: string | null;
   enrollmentDate: string;
-  _count: { documents: number };
+  _count: { documents: number; payments?: number };
 }
 
 export interface StudentDocument {
@@ -523,7 +537,7 @@ export type PaymentMethod =
   | "DEPOSITO"
   | "TARJETA";
 
-export type PaymentSource = "MANUAL" | "WOOCOMMERCE";
+export type PaymentSource = "MANUAL" | "WOOCOMMERCE" | "PORTAL";
 export type PaymentStatus = "ACTIVO" | "ANULADO";
 
 export interface FeeType {

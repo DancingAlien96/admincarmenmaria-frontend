@@ -6,7 +6,12 @@ import { QRCodeCanvas } from "qrcode.react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess, STATUS_LABELS, STATUS_STYLES } from "@/lib/labels";
-import type { Pagination, StudentListItem, StudentStatus } from "@/lib/types";
+import type {
+  Pagination,
+  PendingBoleta,
+  StudentListItem,
+  StudentStatus,
+} from "@/lib/types";
 
 const STATUSES: (StudentStatus | "")[] = ["", "ACTIVO", "EGRESADO", "BAJA"];
 
@@ -17,6 +22,7 @@ const YEARS = Array.from({ length: 6 }, (_, i) => String(CURRENT_YEAR - i));
 export default function StudentsPage() {
   const { user } = useAuth();
   const canEdit = canAccess(user, "STUDENTS", "EDITOR");
+  const canPagos = canAccess(user, "PAYMENTS", "READER");
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StudentStatus | "">("");
@@ -50,6 +56,30 @@ export default function StudentsPage() {
     const t = setTimeout(() => void load(), 250); // debounce de busqueda
     return () => clearTimeout(t);
   }, [load]);
+
+  // Boletas que los alumnos subieron desde el portal y esperan revisión;
+  // se revisan dentro del expediente de cada alumno.
+  const [boletas, setBoletas] = useState<PendingBoleta[]>([]);
+  useEffect(() => {
+    if (!canPagos) return;
+    api<{ payments: PendingBoleta[] }>("/api/payments/pending")
+      .then((r) => setBoletas(r.payments))
+      .catch(() => setBoletas([]));
+  }, [canPagos]);
+  const boletasPorAlumno = [
+    ...boletas
+      .reduce((m, b) => {
+        if (!b.student) return m;
+        const prev = m.get(b.student.id);
+        m.set(b.student.id, {
+          id: b.student.id,
+          name: b.student.fullName,
+          count: (prev?.count ?? 0) + 1,
+        });
+        return m;
+      }, new Map<string, { id: string; name: string; count: number }>())
+      .values(),
+  ];
 
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
@@ -173,6 +203,27 @@ export default function StudentsPage() {
         </div>
       )}
 
+      {boletasPorAlumno.length > 0 && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+          <p className="mb-2 font-medium text-amber-800">
+            {boletasPorAlumno.length} estudiante(s) con comprobantes de pago por
+            revisar
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {boletasPorAlumno.map((b) => (
+              <Link
+                key={b.id}
+                href={`/panel/estudiantes/detalle?id=${b.id}`}
+                className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+              >
+                {b.name}
+                {b.count > 1 && ` (${b.count})`}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           placeholder="Buscar por nombre o DPI…"
@@ -261,6 +312,11 @@ export default function StudentsPage() {
                     >
                       {s.sortName ?? s.fullName}
                     </Link>
+                    {canPagos && (s._count.payments ?? 0) > 0 && (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                        Boleta por revisar
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{s.dpi ?? "—"}</td>
                   <td className="px-4 py-3">

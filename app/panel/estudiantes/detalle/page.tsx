@@ -10,10 +10,12 @@ import {
   DOC_TYPE_LABELS,
   formatGTQ,
   PAYMENT_METHOD_LABELS,
+  PAYMENT_SOURCE_LABELS,
   STATUS_LABELS,
   STATUS_STYLES,
 } from "@/lib/labels";
 import type {
+  ChargePayment,
   CuotaPlanItem,
   DocumentType,
   GradeCategory,
@@ -360,9 +362,19 @@ function CuotasCard({
         (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
       )
     : [];
+  const boletasPendientes = charges.reduce(
+    (n, c) =>
+      n + (c.payments ?? []).filter((p) => p.status === "EN_REVISION").length,
+    0
+  );
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-5">
+    <section
+      id="cuotas"
+      className={`rounded-xl border bg-white p-5 ${
+        boletasPendientes > 0 ? "border-amber-300" : "border-gray-200"
+      }`}
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold text-brand-800">Estado de cuenta (cuotas)</h2>
         {data && data.charges.length > 0 && (
@@ -372,6 +384,12 @@ function CuotasCard({
           </span>
         )}
       </div>
+      {boletasPendientes > 0 && (
+        <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          El estudiante envió {boletasPendientes} comprobante(s) de pago por
+          revisar.
+        </p>
+      )}
 
       {!data ? (
         <p className="text-sm text-gray-400">Cargando…</p>
@@ -392,7 +410,19 @@ function CuotasCard({
       ) : (
         <ul className="divide-y divide-gray-100">
           {charges.map((c) => {
-            const est = chargeEstado(c);
+            const enRevision = (c.payments ?? []).filter(
+              (p) => p.status === "EN_REVISION"
+            );
+            const aplicados = (c.payments ?? []).filter(
+              (p) => p.status === "ACTIVO"
+            );
+            const est =
+              enRevision.length > 0 && c.status === "PENDIENTE"
+                ? {
+                    label: "En revisión",
+                    cls: "border-amber-200 bg-amber-50 text-amber-700",
+                  }
+                : chargeEstado(c);
             const pagable = canEdit && c.status === "PENDIENTE" && c.saldo > 0;
             return (
               <li key={c.id} className="py-3">
@@ -425,6 +455,44 @@ function CuotasCard({
                   )}
                 </div>
 
+                {aplicados.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {aplicados.map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500"
+                      >
+                        <span className="text-green-600">✓</span>
+                        <span className="font-medium text-gray-700">
+                          {formatGTQ(p.amount - p.discount)}
+                        </span>
+                        <span>· {PAYMENT_METHOD_LABELS[p.method]}</span>
+                        <span>· {PAYMENT_SOURCE_LABELS[p.source]}</span>
+                        <span>· {p.paidAt.slice(0, 10)}</span>
+                        {p.receiptUrl && (
+                          <a
+                            href={p.receiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-brand-600 hover:underline"
+                          >
+                            Ver comprobante
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {enRevision.map((p) => (
+                  <BoletaRevision
+                    key={p.id}
+                    payment={p}
+                    canEdit={canEdit}
+                    onDone={reload}
+                  />
+                ))}
+
                 {pagable && payFor === c.id && (
                   <RegistrarPagoInline
                     studentId={studentId}
@@ -441,6 +509,107 @@ function CuotasCard({
         </ul>
       )}
     </section>
+  );
+}
+
+// Boleta subida por el alumno desde el portal, pendiente de aprobación.
+function BoletaRevision({
+  payment,
+  canEdit,
+  onDone,
+}: {
+  payment: ChargePayment;
+  canEdit: boolean;
+  onDone: () => void | Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+
+  async function act(action: "approve" | "reject") {
+    setBusy(true);
+    try {
+      await api(`/api/payments/${payment.id}/${action}`, {
+        method: "POST",
+        ...(action === "reject" ? { body: { reason } } : {}),
+      });
+      await onDone();
+    } catch (err) {
+      alert(
+        err instanceof ApiError
+          ? err.message
+          : action === "approve"
+            ? "No se pudo aprobar"
+            : "No se pudo rechazar"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1 text-xs text-gray-600">
+          <p className="font-medium text-amber-800">Comprobante por revisar</p>
+          <p>
+            {formatGTQ(payment.amount)} · {PAYMENT_METHOD_LABELS[payment.method]}{" "}
+            · {payment.paidAt.slice(0, 10)}
+          </p>
+        </div>
+        {payment.receiptUrl && (
+          <a
+            href={payment.receiptUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Ver boleta
+          </a>
+        )}
+        {canEdit && !rejecting && (
+          <>
+            <button
+              onClick={() => void act("approve")}
+              disabled={busy}
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
+            >
+              Aprobar
+            </button>
+            <button
+              onClick={() => setRejecting(true)}
+              disabled={busy}
+              className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+            >
+              Rechazar
+            </button>
+          </>
+        )}
+      </div>
+      {rejecting && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <input
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Motivo del rechazo (opcional)"
+            className="min-w-0 flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs"
+          />
+          <button
+            onClick={() => void act("reject")}
+            disabled={busy}
+            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+          >
+            {busy ? "Rechazando…" : "Confirmar rechazo"}
+          </button>
+          <button
+            onClick={() => setRejecting(false)}
+            className="text-xs text-gray-500"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

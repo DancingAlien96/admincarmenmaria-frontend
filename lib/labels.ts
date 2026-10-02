@@ -53,6 +53,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export const PAYMENT_SOURCE_LABELS: Record<PaymentSource, string> = {
   MANUAL: "Manual",
   WOOCOMMERCE: "Tienda en línea",
+  PORTAL: "Portal del alumno",
 };
 
 // Formatea un monto en Quetzales
