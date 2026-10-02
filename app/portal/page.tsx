@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatGTQ } from "@/lib/labels";
-import type { PortalDashboard } from "@/lib/types";
+import Link from "next/link";
+import { formatGTQ, STATUS_LABELS } from "@/lib/labels";
+import type { PortalCuotas, PortalDashboard } from "@/lib/types";
 
 export default function PortalDashboardPage() {
   const [data, setData] = useState<PortalDashboard | null>(null);
@@ -21,8 +22,11 @@ export default function PortalDashboardPage() {
 
   const s = data.student;
   const firstName = s.fullName.split(" ")[0];
-  const statusLabel =
-    s.status === "ACTIVO" ? "Activo" : s.status === "EGRESADO" ? "Egresado" : "Baja";
+  const statusLabel = STATUS_LABELS[s.status];
+
+  if (s.status === "ASPIRANTE" || s.status === "NO_ADMITIDO") {
+    return <SolicitudAspirante name={firstName} status={s.status} />;
+  }
 
   return (
     <div>
@@ -152,6 +156,114 @@ function StatCard({
       <p className="text-xs uppercase text-gray-500">{label}</p>
       <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
       {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+    </div>
+  );
+}
+
+// Inicio del portal mientras la persona es aspirante (aún no admitida).
+function SolicitudAspirante({
+  name,
+  status,
+}: {
+  name: string;
+  status: "ASPIRANTE" | "NO_ADMITIDO";
+}) {
+  const [cuotas, setCuotas] = useState<PortalCuotas | null>(null);
+  useEffect(() => {
+    if (status !== "ASPIRANTE") return;
+    api<PortalCuotas>("/api/portal/cuotas")
+      .then(setCuotas)
+      .catch(() => setCuotas(null));
+  }, [status]);
+  const pagado =
+    !!cuotas && cuotas.summary.totalCharged > 0 && cuotas.summary.totalDue <= 0;
+  const enRevision = !!cuotas?.cuotas.some((c) => c.estado === "en_revision");
+  const pasos = [
+    { titulo: "Ficha de inscripción", hecho: true },
+    {
+      titulo: enRevision
+        ? "Pago del examen de admisión (en revisión)"
+        : "Pago del examen de admisión",
+      hecho: pagado,
+    },
+    { titulo: "Resultado del examen", hecho: false },
+  ];
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-brand-800 sm:text-2xl">
+          Mi solicitud de ingreso
+        </h1>
+        <p className="text-sm text-gray-500">
+          Escuela Privada de Auxiliares de Enfermería Carmen María
+        </p>
+      </div>
+
+      {status === "NO_ADMITIDO" ? (
+        <section className="rounded-2xl border border-red-200 bg-white p-5 sm:p-6">
+          <h2 className="text-lg font-bold text-red-800">Hola, {name}</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Gracias por participar en el proceso de admisión. En esta ocasión
+            no fue posible tu ingreso. Si deseas volver a intentarlo,
+            comunícate con la escuela.
+          </p>
+        </section>
+      ) : (
+        <>
+          <section className="mb-6 rounded-2xl border border-amber-200 bg-white p-5 sm:p-6">
+            <h2 className="text-lg font-bold text-brand-800">
+              Hola, {name}
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Tu solicitud fue recibida. Para continuar, paga tu{" "}
+              <b>examen de admisión</b>. Cuando la escuela registre tu
+              resultado y seas admitido/a, aquí verás tu plan de pagos, tus
+              fases y materiales.
+            </p>
+            {pagado ? (
+              <p className="mt-4 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+                Tu examen está pagado. La escuela te avisará tu resultado.
+              </p>
+            ) : (
+              !enRevision && (
+                <Link
+                  href="/portal/pagos"
+                  className="mt-4 inline-block rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+                >
+                  Pagar examen de admisión
+                </Link>
+              )
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+            <h3 className="mb-3 font-semibold text-gray-800">
+              Proceso de admisión
+            </h3>
+            <ol className="space-y-3">
+              {pasos.map((p, i) => (
+                <li key={p.titulo} className="flex items-center gap-3 text-sm">
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                      p.hecho
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {p.hecho ? "✓" : i + 1}
+                  </span>
+                  <span className={p.hecho ? "text-gray-800" : "text-gray-500"}>
+                    {p.titulo}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-4 text-xs text-gray-400">
+              El estado del pago lo ves en la sección Pagos.
+            </p>
+          </section>
+        </>
+      )}
     </div>
   );
 }

@@ -166,9 +166,11 @@ export default function ReportesPage() {
                   <label className="mb-1 block text-xs text-gray-500">Estado</label>
                   <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass}>
                     <option value="">Todos</option>
+                    <option value="ASPIRANTE">Aspirantes</option>
                     <option value="ACTIVO">Activos</option>
                     <option value="EGRESADO">Egresados</option>
                     <option value="BAJA">De baja</option>
+                    <option value="NO_ADMITIDO">No admitidos</option>
                   </select>
                 </div>
               )}

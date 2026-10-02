@@ -175,7 +175,7 @@ function StudentDetailInner() {
                     : "Crear acceso al portal"}
               </button>
             )}
-            {canEdit && (
+            {canEdit && student.status === "ACTIVO" && (
               <button
                 onClick={() => setShowPlan(true)}
                 className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50"
@@ -280,11 +280,21 @@ function StudentDetailInner() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
+            {(student.status === "ASPIRANTE" ||
+              student.status === "NO_ADMITIDO") && (
+              <AdmisionCard
+                student={student}
+                canEdit={canEdit}
+                canPagos={canPagos}
+                onChange={load}
+              />
+            )}
             <InfoCard student={student} />
             {canPagos && (
               <CuotasCard
                 studentId={id}
                 canEdit={canPagosEdit}
+                canGenerate={canPagosEdit && student.status === "ACTIVO"}
                 refreshKey={pagosRefresh}
                 onGenerar={() => setShowPlan(true)}
               />
@@ -298,7 +308,11 @@ function StudentDetailInner() {
             />
           </div>
           <div className="space-y-6">
-            {canEdit && <StatusCard student={student} onChange={load} />}
+            {canEdit &&
+              student.status !== "ASPIRANTE" &&
+              student.status !== "NO_ADMITIDO" && (
+                <StatusCard student={student} onChange={load} />
+              )}
             <HistoryCard student={student} />
           </div>
         </div>
@@ -338,11 +352,13 @@ function chargeEstado(c: StudentAccount["charges"][number]) {
 function CuotasCard({
   studentId,
   canEdit,
+  canGenerate,
   refreshKey,
   onGenerar,
 }: {
   studentId: string;
   canEdit: boolean;
+  canGenerate: boolean;
   refreshKey: number;
   onGenerar: () => void;
 }) {
@@ -398,7 +414,7 @@ function CuotasCard({
           <p className="text-sm text-gray-500">
             Este estudiante aún no tiene un plan de cuotas.
           </p>
-          {canEdit && (
+          {canGenerate && (
             <button
               onClick={onGenerar}
               className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
@@ -610,6 +626,223 @@ function BoletaRevision({
         </div>
       )}
     </div>
+  );
+}
+
+// Etapa de admisión: el aspirante paga el examen y el personal registra si
+// lo aprobó (pasa a Activo y se le aplica el plan) o no.
+function AdmisionCard({
+  student,
+  canEdit,
+  canPagos,
+  onChange,
+}: {
+  student: StudentDetail;
+  canEdit: boolean;
+  canPagos: boolean;
+  onChange: () => Promise<void>;
+}) {
+  // Por defecto el plan inicia el mes siguiente
+  const next = new Date();
+  next.setDate(1);
+  next.setMonth(next.getMonth() + 1);
+  const [account, setAccount] = useState<StudentAccount | null>(null);
+  const [mode, setMode] = useState<"aprobar" | "rechazar" | null>(null);
+  const [note, setNote] = useState("");
+  const [aplicarPlan, setAplicarPlan] = useState(true);
+  const [startMonth, setStartMonth] = useState(
+    `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}`
+  );
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!canPagos) return;
+    api<StudentAccount>(`/api/charges/student/${student.id}`)
+      .then(setAccount)
+      .catch(() => setAccount(null));
+  }, [student.id, canPagos]);
+
+  const aspirante = student.status === "ASPIRANTE";
+  const charged = account?.summary.totalCharged ?? 0;
+  const pagado = account !== null && charged > 0 && account.summary.totalDue <= 0;
+  const enRevision = (account?.charges ?? []).some((c) =>
+    (c.payments ?? []).some((p) => p.status === "EN_REVISION")
+  );
+
+  async function decidir(result: "APROBADO" | "NO_APROBADO") {
+    setBusy(true);
+    try {
+      const r = await api<{ planCreated: number; planError: string | null }>(
+        `/api/students/${student.id}/admission/decision`,
+        {
+          method: "POST",
+          body: {
+            result,
+            note: note.trim() || undefined,
+            startMonth:
+              result === "APROBADO" && aplicarPlan ? startMonth : undefined,
+          },
+        }
+      );
+      if (r.planError) {
+        alert(`Admitido, pero no se pudo aplicar el plan: ${r.planError}`);
+      }
+      await onChange();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reabrir() {
+    if (!confirm("¿Abrir un nuevo intento de admisión? Se generará otro cobro del examen."))
+      return;
+    setBusy(true);
+    try {
+      await api(`/api/students/${student.id}/admission/reopen`, {
+        method: "POST",
+      });
+      await onChange();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo reabrir");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!aspirante) {
+    return (
+      <section className="rounded-xl border border-red-200 bg-red-50/40 p-5">
+        <h2 className="mb-1 font-semibold text-red-800">No admitido</h2>
+        <p className="mb-3 text-sm text-gray-600">
+          No aprobó el examen de admisión. No tiene cuotas ni cuenta para la
+          mora.
+        </p>
+        {canEdit && (
+          <button
+            onClick={() => void reabrir()}
+            disabled={busy}
+            className="rounded-lg border border-brand-300 bg-white px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
+          >
+            Nuevo intento de admisión
+          </button>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-xl border border-amber-300 bg-amber-50/40 p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold text-amber-900">
+          Aspirante · Examen de admisión
+        </h2>
+        {canPagos && account && (
+          <span
+            className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+              pagado
+                ? "border-green-200 bg-green-50 text-green-700"
+                : enRevision
+                  ? "border-amber-200 bg-amber-50 text-amber-700"
+                  : "border-gray-200 bg-white text-gray-600"
+            }`}
+          >
+            {charged === 0
+              ? "Sin cobro de examen"
+              : pagado
+                ? "Examen pagado"
+                : enRevision
+                  ? "Pago en revisión"
+                  : "Examen pendiente de pago"}
+          </span>
+        )}
+      </div>
+      <p className="mb-4 text-sm text-gray-600">
+        Aún no es alumno. Cuando tenga el resultado del examen, regístralo
+        aquí: si aprueba pasa a <b>Activo</b> y se le aplica su plan de
+        cuotas.
+      </p>
+
+      {canEdit && mode === null && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setMode("aprobar")}
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+          >
+            Aprobó el examen
+          </button>
+          <button
+            onClick={() => setMode("rechazar")}
+            className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+          >
+            No aprobó
+          </button>
+        </div>
+      )}
+
+      {canEdit && mode !== null && (
+        <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-4 text-sm">
+          {mode === "aprobar" && !pagado && charged > 0 && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              El examen aún no aparece como pagado. Puedes admitirlo igual si
+              lo pagó por otro medio.
+            </p>
+          )}
+          {mode === "aprobar" && (
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={aplicarPlan}
+                  onChange={(e) => setAplicarPlan(e.target.checked)}
+                />
+                <span className="text-gray-700">Aplicar plan de cuotas desde</span>
+              </label>
+              <input
+                type="month"
+                value={startMonth}
+                disabled={!aplicarPlan}
+                onChange={(e) => setStartMonth(e.target.value)}
+                className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm disabled:opacity-50"
+              />
+            </div>
+          )}
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Nota (opcional, ej. punteo 78/100)"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() =>
+                void decidir(mode === "aprobar" ? "APROBADO" : "NO_APROBADO")
+              }
+              disabled={busy}
+              className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60 ${
+                mode === "aprobar"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
+            >
+              {busy
+                ? "Guardando…"
+                : mode === "aprobar"
+                  ? "Confirmar: admitir"
+                  : "Confirmar: no admitido"}
+            </button>
+            <button
+              onClick={() => setMode(null)}
+              disabled={busy}
+              className="text-sm text-gray-500"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1080,7 +1313,7 @@ function CuotaPlanModal({
 
   useEffect(() => {
     api<{ items: CuotaPlanItem[] }>("/api/charges/plan-template")
-      .then((r) => setItems(r.items))
+      .then((r) => setItems(r.items.filter((it) => !it.admission)))
       .catch(() => setItems([]));
   }, []);
 

@@ -16,6 +16,14 @@ const NAV = [
   { href: "/portal/cuenta", label: "Cambiar contraseña" },
 ];
 
+// Mientras no es alumno admitido: solicitud, pago del examen y documentos
+const NAV_ASPIRANTE = [
+  { href: "/portal", label: "Mi solicitud" },
+  { href: "/portal/pagos", label: "Pagos" },
+  { href: "/portal/documentos", label: "Documentación" },
+  { href: "/portal/cuenta", label: "Cambiar contraseña" },
+];
+
 export default function PortalLayout({
   children,
 }: {
@@ -54,6 +62,10 @@ export default function PortalLayout({
       document.body.style.overflow = "";
     };
   }, [open]);
+
+  const esAspirante =
+    user?.studentStatus === "ASPIRANTE" || user?.studentStatus === "NO_ADMITIDO";
+  const nav = esAspirante ? NAV_ASPIRANTE : NAV;
 
   if (loading || !user || user.role !== "ESTUDIANTE") {
     return (
@@ -142,7 +154,7 @@ export default function PortalLayout({
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active =
               item.href === "/portal"
                 ? pathname === "/portal"

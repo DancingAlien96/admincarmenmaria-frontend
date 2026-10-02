@@ -13,7 +13,17 @@ import type {
   StudentStatus,
 } from "@/lib/types";
 
-const STATUSES: (StudentStatus | "")[] = ["", "ACTIVO", "EGRESADO", "BAJA"];
+const STATUSES: (StudentStatus | "")[] = [
+  "",
+  "ASPIRANTE",
+  "ACTIVO",
+  "EGRESADO",
+  "BAJA",
+  "NO_ADMITIDO",
+];
+
+// Cuántos nombres se muestran en el aviso de comprobantes por revisar
+const BOLETAS_PREVIEW = 5;
 
 // Años de inscripcion para filtrar (del actual hacia atras)
 const CURRENT_YEAR = new Date().getFullYear();
@@ -28,6 +38,7 @@ export default function StudentsPage() {
   const [status, setStatus] = useState<StudentStatus | "">("");
   const [sede, setSede] = useState("");
   const [year, setYear] = useState("");
+  const [soloBoletas, setSoloBoletas] = useState(false);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<StudentListItem[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -41,6 +52,7 @@ export default function StudentsPage() {
       if (status) params.set("status", status);
       if (sede) params.set("sede", sede);
       if (year) params.set("year", year);
+      if (soloBoletas) params.set("boletas", "true");
       params.set("page", String(page));
       const res = await api<{ data: StudentListItem[]; pagination: Pagination }>(
         `/api/students?${params.toString()}`
@@ -50,7 +62,7 @@ export default function StudentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, status, sede, year, page]);
+  }, [search, status, sede, year, soloBoletas, page]);
 
   useEffect(() => {
     const t = setTimeout(() => void load(), 250); // debounce de busqueda
@@ -205,22 +217,41 @@ export default function StudentsPage() {
 
       {boletasPorAlumno.length > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-          <p className="mb-2 font-medium text-amber-800">
-            {boletasPorAlumno.length} estudiante(s) con comprobantes de pago por
-            revisar
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {boletasPorAlumno.map((b) => (
-              <Link
-                key={b.id}
-                href={`/panel/estudiantes/detalle?id=${b.id}`}
-                className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
-              >
-                {b.name}
-                {b.count > 1 && ` (${b.count})`}
-              </Link>
-            ))}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-medium text-amber-800">
+              {boletasPorAlumno.length} estudiante(s) con comprobantes de pago
+              por revisar
+            </p>
+            <button
+              onClick={() => {
+                setSoloBoletas((v) => !v);
+                setPage(1);
+              }}
+              className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+            >
+              {soloBoletas ? "Ver todos los expedientes" : "Ver solo estos"}
+            </button>
           </div>
+          {/* Vista previa corta; la lista completa se ve filtrando la tabla */}
+          {!soloBoletas && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {boletasPorAlumno.slice(0, BOLETAS_PREVIEW).map((b) => (
+                <Link
+                  key={b.id}
+                  href={`/panel/estudiantes/detalle?id=${b.id}`}
+                  className="max-w-[14rem] truncate rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                >
+                  {b.name}
+                  {b.count > 1 && ` (${b.count})`}
+                </Link>
+              ))}
+              {boletasPorAlumno.length > BOLETAS_PREVIEW && (
+                <span className="text-xs text-amber-700">
+                  +{boletasPorAlumno.length - BOLETAS_PREVIEW} más
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 

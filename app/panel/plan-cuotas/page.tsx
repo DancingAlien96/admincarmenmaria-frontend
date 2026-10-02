@@ -34,8 +34,9 @@ export default function PlanCuotasPage() {
     void load();
   }, [load]);
 
+  // Total del plan del alumno admitido (sin el cobro de admisión)
   const total = (items ?? [])
-    .filter((i) => i.active)
+    .filter((i) => i.active && !i.admission)
     .reduce((s, i) => s + i.amount, 0);
 
   async function agregar(e: React.FormEvent) {
@@ -104,9 +105,10 @@ export default function PlanCuotasPage() {
         Plan de cuotas general
       </h1>
       <p className="mb-6 text-sm text-gray-500">
-        Este es el plan de cuotas que se aplica a los estudiantes (Admisión,
-        mensualidades y trámite). Defínelo una sola vez; luego lo aplicas a un
-        estudiante desde su expediente o a toda una cohorte aquí abajo. Al
+        La <b>admisión</b> se cobra al aspirante en cuanto llena su ficha. El
+        resto (mensualidades y trámite) es el plan del alumno admitido: se le
+        aplica al aprobar el examen, desde su expediente o a toda una cohorte
+        aquí abajo. Al
         cambiar un monto podrás elegir si también se actualizan las cuotas
         pendientes ya asignadas (las pagadas nunca cambian).
       </p>
@@ -170,8 +172,26 @@ export default function PlanCuotasPage() {
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {items.map((it) => (
+            {[
+              {
+                title: "Admisión · se cobra al aspirante",
+                rows: items.filter((i) => i.admission),
+              },
+              {
+                title: "Plan del alumno admitido",
+                rows: items.filter((i) => !i.admission),
+              },
+            ].map((g) => (
+            <tbody key={g.title} className="divide-y divide-gray-100">
+              <tr className="bg-brand-50/50">
+                <td
+                  colSpan={4}
+                  className="px-4 py-2 text-xs font-semibold uppercase text-brand-800"
+                >
+                  {g.title}
+                </td>
+              </tr>
+              {g.rows.map((it) => (
                 <tr key={it.id} className={it.active ? "" : "bg-gray-50"}>
                   {edit?.id === it.id ? (
                     <>
@@ -267,10 +287,11 @@ export default function PlanCuotasPage() {
                 </tr>
               ))}
             </tbody>
+            ))}
             <tfoot>
               <tr className="border-t border-gray-200 bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-700" colSpan={2}>
-                  Total del plan
+                  Total del plan del alumno
                 </td>
                 <td className="px-4 py-3 text-right font-bold text-brand-800">
                   {formatGTQ(total)}

@@ -209,7 +209,8 @@ function InscripcionInner() {
         throw new Error(j.message ?? "No se pudo completar el registro");
       }
       await login(form.email, loginPassword);
-      router.replace("/portal");
+      // Inscripción nueva: paso 2 = pagar el examen de admisión
+      router.replace(isActivation ? "/portal" : "/portal/pagos?examen=1");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al registrarte");
       setSaving(false);
@@ -271,6 +272,22 @@ function InscripcionInner() {
           <p className="mt-1 text-sm text-gray-500">
             Escuela de Enfermería Carmen María
           </p>
+          {!isActivation && (
+            <ol className="mt-4 grid grid-cols-2 gap-2 text-left text-xs">
+              <li className="rounded-lg border border-brand-300 bg-brand-50 px-3 py-2">
+                <span className="block font-semibold text-brand-800">
+                  Paso 1 de 2
+                </span>
+                <span className="text-brand-700">Tus datos</span>
+              </li>
+              <li className="rounded-lg border border-gray-200 px-3 py-2">
+                <span className="block font-semibold text-gray-500">
+                  Paso 2 de 2
+                </span>
+                <span className="text-gray-500">Pago del examen de admisión</span>
+              </li>
+            </ol>
+          )}
         </div>
 
         {isActivation ? (

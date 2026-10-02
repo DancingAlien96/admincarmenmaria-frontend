@@ -23,6 +23,8 @@ export interface AuthUser {
   role: UserRole;
   active: boolean;
   studentId?: string | null;
+  // Etapa del alumno (portal limitado mientras es aspirante)
+  studentStatus?: StudentStatus | null;
   permissions: Permission[];
 }
 
@@ -111,6 +113,8 @@ export interface CuotaPlanItem {
   monthOffset: number;
   order: number;
   active: boolean;
+  // Cobro de la etapa de aspirante (examen de admisión)
+  admission?: boolean;
 }
 
 export interface AdminCharge {
@@ -261,7 +265,12 @@ export interface PendingBoleta {
   } | null;
 }
 
-export type StudentStatus = "ACTIVO" | "EGRESADO" | "BAJA";
+export type StudentStatus =
+  | "ASPIRANTE"
+  | "NO_ADMITIDO"
+  | "ACTIVO"
+  | "EGRESADO"
+  | "BAJA";
 
 export type DocumentType =
   | "DPI"

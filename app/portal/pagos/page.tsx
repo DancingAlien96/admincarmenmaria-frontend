@@ -50,13 +50,33 @@ export default function PortalPagosPage() {
   const [data, setData] = useState<PortalCuotas | null>(null);
   const [loading, setLoading] = useState(true);
   const [boletaFor, setBoletaFor] = useState<PortalCuota | null>(null);
+  // Viene de la ficha de inscripción (paso 2: pagar el examen)
+  const [desdeFicha, setDesdeFicha] = useState(false);
 
   async function reload() {
-    setData(await api<PortalCuotas>("/api/portal/cuotas"));
+    const r = await api<PortalCuotas>("/api/portal/cuotas");
+    setData(r);
+    return r;
   }
 
   useEffect(() => {
-    reload().finally(() => setLoading(false));
+    const examen =
+      new URLSearchParams(window.location.search).get("examen") === "1";
+    reload()
+      .then((r) => {
+        if (!examen) return;
+        setDesdeFicha(true);
+        // Quita el parámetro para que al recargar no se vuelva a abrir
+        window.history.replaceState(null, "", window.location.pathname);
+        const porPagar = r.cuotas.find(
+          (c) =>
+            c.estado === "pendiente" ||
+            c.estado === "vencido" ||
+            c.estado === "parcial"
+        );
+        if (porPagar) setBoletaFor(porPagar);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading || !data) {
@@ -71,6 +91,15 @@ export default function PortalPagosPage() {
 
   return (
     <div>
+      {desdeFicha && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          <p className="font-semibold">¡Tu ficha fue recibida!</p>
+          <p>
+            Paso 2 de 2: paga tu examen de admisión con tarjeta o sube tu
+            boleta. Si prefieres pagar después, entra al Campus cuando quieras.
+          </p>
+        </div>
+      )}
       <h1 className="mb-1 text-xl font-bold text-brand-800 sm:text-2xl">
         Mis pagos
       </h1>

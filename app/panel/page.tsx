@@ -174,6 +174,7 @@ function IncomeChart({ data }: { data: { label: string; income: number }[] }) {
 }
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
+  ASPIRANTE: { label: "Aspirantes", color: "bg-amber-400" },
   ACTIVO: { label: "Activos", color: "bg-green-500" },
   EGRESADO: { label: "Egresados", color: "bg-brand-500" },
   BAJA: { label: "Baja", color: "bg-gray-400" },
@@ -190,7 +191,7 @@ function StatusBars({
     return <p className="text-sm text-gray-400">Sin estudiantes registrados.</p>;
   return (
     <div className="space-y-3">
-      {(["ACTIVO", "EGRESADO", "BAJA"] as const).map((s) => {
+      {(["ASPIRANTE", "ACTIVO", "EGRESADO", "BAJA"] as const).map((s) => {
         const n = byStatus[s] ?? 0;
         const pct = total > 0 ? Math.round((n / total) * 100) : 0;
         return (

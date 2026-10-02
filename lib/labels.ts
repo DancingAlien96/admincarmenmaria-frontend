@@ -74,12 +74,16 @@ export const SECTION_LABELS: Record<ModuleSection, string> = {
 };
 
 export const STATUS_LABELS: Record<StudentStatus, string> = {
+  ASPIRANTE: "Aspirante",
+  NO_ADMITIDO: "No admitido",
   ACTIVO: "Activo",
   EGRESADO: "Egresado",
   BAJA: "Baja definitiva",
 };
 
 export const STATUS_STYLES: Record<StudentStatus, string> = {
+  ASPIRANTE: "bg-amber-100 text-amber-800",
+  NO_ADMITIDO: "bg-red-100 text-red-700",
   ACTIVO: "bg-green-100 text-green-800",
   EGRESADO: "bg-blue-100 text-blue-800",
   BAJA: "bg-gray-200 text-gray-700",
