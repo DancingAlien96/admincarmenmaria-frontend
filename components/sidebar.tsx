@@ -186,6 +186,17 @@ export function Sidebar() {
                 Documentos requeridos
               </Link>
               <Link
+                href="/panel/fases"
+                className={[
+                  "flex items-center rounded-lg px-3 py-2 text-sm transition",
+                  pathname.startsWith("/panel/fases")
+                    ? "bg-white/15 font-medium"
+                    : "text-brand-100/80 hover:bg-white/10",
+                ].join(" ")}
+              >
+                Gestión de Fases
+              </Link>
+              <Link
                 href="/panel/plan-cuotas"
                 className={[
                   "flex items-center rounded-lg px-3 py-2 text-sm transition",

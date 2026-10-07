@@ -86,6 +86,243 @@ function EmailTestCard() {
   );
 }
 
+interface EmailDesign {
+  style: "solido" | "claro";
+  color: string;
+  title: string;
+  subtitle: string;
+  bannerKey: string | null;
+  bannerUrl: string | null;
+}
+
+// Diseño del encabezado de todos los correos, con vista previa en vivo.
+function EmailDesignCard() {
+  const [design, setDesign] = useState<EmailDesign | null>(null);
+  const [saved, setSaved] = useState<string>("");
+  const [preview, setPreview] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    api<{ design: EmailDesign; preview: string }>("/api/whatsapp/email-design")
+      .then((r) => {
+        setDesign(r.design);
+        setSaved(JSON.stringify(r.design));
+        setPreview(r.preview);
+      })
+      .catch(() => setDesign(null));
+  }, []);
+
+  // Vista previa al editar (sin guardar)
+  useEffect(() => {
+    if (!design) return;
+    const t = setTimeout(() => {
+      api<{ preview: string }>("/api/whatsapp/email-design/preview", {
+        method: "POST",
+        body: design,
+      })
+        .then((r) => setPreview(r.preview))
+        .catch(() => undefined);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [design]);
+
+  if (!design) return null;
+  const dirty = JSON.stringify(design) !== saved;
+  const set = (patch: Partial<EmailDesign>) => setDesign({ ...design, ...patch });
+
+  async function subirBanner(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const up = await uploadFile(file);
+      set({ bannerKey: up.key, bannerUrl: up.url });
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo subir la imagen");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function guardar() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await api<{ design: EmailDesign }>("/api/whatsapp/email-design", {
+        method: "PUT",
+        body: design,
+      });
+      setDesign(r.design);
+      setSaved(JSON.stringify(r.design));
+      setMsg({ ok: true, text: "Diseño guardado. Los próximos correos ya lo usan." });
+    } catch (err) {
+      setMsg({
+        ok: false,
+        text: err instanceof ApiError ? err.message : "No se pudo guardar",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm";
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <h2 className="mb-1 font-semibold text-brand-800">Diseño del correo</h2>
+      <p className="mb-4 text-sm text-gray-500">
+        Encabezado de todos los correos del sistema (bienvenida, pagos, avisos y
+        correos masivos). Los cambios se ven en la vista previa antes de
+        guardar.
+      </p>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="space-y-3 text-sm">
+          <div>
+            <span className="mb-1 block text-gray-600">Estilo</span>
+            <div className="flex gap-2">
+              {(
+                [
+                  ["solido", "Sólido (fondo de color)"],
+                  ["claro", "Claro (fondo blanco)"],
+                ] as [EmailDesign["style"], string][]
+              ).map(([v, label]) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => set({ style: v })}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${
+                    design.style === v
+                      ? "border-brand-600 bg-brand-50 font-medium text-brand-800"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="mb-1 block text-gray-600">Color de marca</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={design.color}
+                onChange={(e) => set({ color: e.target.value })}
+                className="h-9 w-14 cursor-pointer rounded border border-gray-300"
+              />
+              <code className="text-xs text-gray-500">{design.color}</code>
+              {design.color !== "#16314f" && (
+                <button
+                  type="button"
+                  onClick={() => set({ color: "#16314f" })}
+                  className="text-xs text-brand-600 hover:underline"
+                >
+                  Azul de la escuela
+                </button>
+              )}
+            </div>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-gray-600">Título</span>
+            <input
+              value={design.title}
+              maxLength={80}
+              onChange={(e) => set({ title: e.target.value })}
+              className={inputClass}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-gray-600">Subtítulo (opcional)</span>
+            <input
+              value={design.subtitle}
+              maxLength={80}
+              onChange={(e) => set({ subtitle: e.target.value })}
+              className={inputClass}
+            />
+          </label>
+          <div>
+            <span className="mb-1 block text-gray-600">
+              Banner (opcional, imagen horizontal arriba del correo)
+            </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+                {uploading
+                  ? "Subiendo…"
+                  : design.bannerKey
+                    ? "Cambiar imagen"
+                    : "Subir imagen"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    void subirBanner(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {design.bannerKey && (
+                <button
+                  type="button"
+                  onClick={() => set({ bannerKey: null, bannerUrl: null })}
+                  className="text-xs text-red-600 hover:underline"
+                >
+                  Quitar banner
+                </button>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              Recomendado: 1040 × 300 px aprox.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              onClick={() => void guardar()}
+              disabled={busy || !dirty}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              {busy ? "Guardando…" : "Guardar diseño"}
+            </button>
+            {dirty && (
+              <button
+                type="button"
+                onClick={() => setDesign(JSON.parse(saved) as EmailDesign)}
+                className="text-sm text-gray-500 hover:underline"
+              >
+                Descartar cambios
+              </button>
+            )}
+          </div>
+          {msg && (
+            <p
+              className={`rounded-lg px-3 py-2 text-sm ${
+                msg.ok ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+              }`}
+            >
+              {msg.text}
+            </p>
+          )}
+          <p className="text-xs text-gray-400">
+            Para verlo en tu bandeja, guarda y usa “Enviar prueba” en la tarjeta
+            Correo electrónico.
+          </p>
+        </div>
+        <div>
+          <span className="mb-1 block text-sm text-gray-600">Vista previa</span>
+          <iframe
+            title="Vista previa del correo"
+            srcDoc={preview}
+            sandbox=""
+            className="h-[520px] w-full rounded-lg border border-gray-200 bg-gray-100"
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 type Audience = "students" | "teachers" | "custom";
 
 interface PickedPerson {
@@ -510,6 +747,7 @@ export default function RemindersPage() {
 
       <div className="space-y-6">
         {canEdit && <EmailTestCard />}
+        {canEdit && <EmailDesignCard />}
         {canEdit && <BulkEmailCard />}
         {canEdit && <EmailRemindersCard />}
         {canEdit && <BotConfigCard />}

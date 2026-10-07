@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
 import { EBOOK_CATEGORIES, type Ebook } from "@/lib/types";
@@ -19,6 +19,7 @@ export default function EbooksAdminPage() {
   const [file, setFile] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [forAdmission, setForAdmission] = useState(false);
+  const [editing, setEditing] = useState<Ebook | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -250,6 +251,12 @@ export default function EbooksAdminPage() {
                 Ver
               </a>
               <button
+                onClick={() => setEditing(e)}
+                className="text-xs text-brand-600 hover:underline"
+              >
+                Editar
+              </button>
+              <button
                 onClick={() => void moverAdmision(e)}
                 title={
                   e.forAdmission
@@ -270,6 +277,188 @@ export default function EbooksAdminPage() {
           ))}
         </ul>
       )}
+
+      {editing && (
+        <EditEbookModal
+          ebook={editing}
+          onClose={() => setEditing(null)}
+          onSaved={async () => {
+            setEditing(null);
+            await load();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Editar los datos y la portada de un material ya subido.
+function EditEbookModal({
+  ebook,
+  onClose,
+  onSaved,
+}: {
+  ebook: Ebook;
+  onClose: () => void;
+  onSaved: () => void | Promise<void>;
+}) {
+  const [title, setTitle] = useState(ebook.title);
+  const [author, setAuthor] = useState(ebook.author ?? "");
+  const [category, setCategory] = useState(ebook.category ?? EBOOK_CATEGORIES[0]);
+  const [description, setDescription] = useState(ebook.description ?? "");
+  const [cover, setCover] = useState<File | null>(null);
+  const [removeCover, setRemoveCover] = useState(false);
+  const [busy, setBusy] = useState(false);
+  // Vista previa local de la portada elegida
+  const preview = useMemo(
+    () => (cover ? URL.createObjectURL(cover) : null),
+    [cover]
+  );
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview]
+  );
+  const shown = preview ?? (removeCover ? null : ebook.coverUrl);
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      let coverUrl: string | undefined;
+      let coverKey: string | undefined;
+      if (cover) {
+        const c = await uploadFile(cover);
+        coverUrl = c.url;
+        coverKey = c.key;
+      }
+      await api(`/api/ebooks/${ebook.id}`, {
+        method: "PATCH",
+        body: {
+          title,
+          author,
+          category,
+          description,
+          coverUrl,
+          coverKey,
+          removeCover: !cover && removeCover,
+        },
+      });
+      await onSaved();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const inputClass =
+    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form
+        onSubmit={guardar}
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+      >
+        <h3 className="mb-4 text-lg font-bold text-brand-800">Editar material</h3>
+        <div className="flex gap-4">
+          <div className="flex w-28 shrink-0 flex-col items-center gap-2">
+            <span className="flex h-36 w-28 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              {shown ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={shown} alt="" className="h-full w-full object-contain" />
+              ) : (
+                <span className="text-4xl">📘</span>
+              )}
+            </span>
+            <label className="cursor-pointer text-xs font-medium text-brand-600 hover:underline">
+              {shown ? "Cambiar portada" : "Agregar portada"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  setCover(e.target.files?.[0] ?? null);
+                  setRemoveCover(false);
+                }}
+              />
+            </label>
+            {shown && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCover(null);
+                  setRemoveCover(true);
+                }}
+                className="text-xs text-red-600 hover:underline"
+              >
+                Quitar portada
+              </button>
+            )}
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Título *</label>
+              <input
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Autor</label>
+              <input
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Categoría</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className={inputClass}
+              >
+                {[...new Set([category, ...EBOOK_CATEGORIES])].map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="mt-3">
+          <label className="mb-1 block text-sm text-gray-600">Descripción</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            className={inputClass}
+          />
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={busy || !title.trim()}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          >
+            {busy ? "Guardando…" : "Guardar"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

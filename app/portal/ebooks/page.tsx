@@ -78,13 +78,14 @@ export default function PortalEbooksPage() {
                 key={e.id}
                 className="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white"
               >
-                <div className="flex h-40 items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100">
+                <div className="flex h-52 items-center justify-center bg-gradient-to-br from-brand-50 to-gray-100 p-3">
                   {e.coverUrl ? (
+                    // Portada completa (sin recortar), con sombra de libro
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={e.coverUrl}
                       alt={e.title}
-                      className="h-full w-full object-cover"
+                      className="h-full w-auto max-w-full rounded object-contain shadow-md"
                     />
                   ) : (
                     <span className="text-5xl">📘</span>
