@@ -2,9 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import type { Ebook } from "@/lib/types";
 
 export default function PortalEbooksPage() {
+  const { user } = useAuth();
+  // El aspirante ve aquí su material de estudio para el examen de admisión
+  const aspirante =
+    user?.studentStatus === "ASPIRANTE" || user?.studentStatus === "NO_ADMITIDO";
   const [ebooks, setEbooks] = useState<Ebook[] | null>(null);
   const [cat, setCat] = useState("Todas");
 
@@ -31,10 +36,12 @@ export default function PortalEbooksPage() {
   return (
     <div>
       <h1 className="mb-1 text-xl font-bold text-brand-800 sm:text-2xl">
-        Biblioteca
+        {aspirante ? "Material de estudio" : "Biblioteca"}
       </h1>
       <p className="mb-6 text-sm text-gray-500">
-        Material de apoyo para tu formación. Descárgalo cuando quieras.
+        {aspirante
+          ? "Guías y temarios para preparar tu examen de admisión. Descárgalos cuando quieras."
+          : "Material de apoyo para tu formación. Descárgalo cuando quieras."}
       </p>
 
       {ebooks.length === 0 ? (

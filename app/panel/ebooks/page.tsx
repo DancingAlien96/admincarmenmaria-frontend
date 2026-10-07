@@ -18,6 +18,7 @@ export default function EbooksAdminPage() {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
+  const [forAdmission, setForAdmission] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
@@ -59,6 +60,7 @@ export default function EbooksAdminPage() {
           coverUrl,
           coverKey,
           sizeLabel: sizeLabel(up.size),
+          forAdmission,
         },
       });
       setTitle("");
@@ -66,6 +68,7 @@ export default function EbooksAdminPage() {
       setDescription("");
       setFile(null);
       setCover(null);
+      setForAdmission(false);
       if (fileRef.current) fileRef.current.value = "";
       if (coverRef.current) coverRef.current.value = "";
       await load();
@@ -73,6 +76,18 @@ export default function EbooksAdminPage() {
       alert(err instanceof ApiError ? err.message : "No se pudo agregar");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function moverAdmision(e: Ebook) {
+    try {
+      await api(`/api/ebooks/${e.id}/admission`, {
+        method: "PATCH",
+        body: { forAdmission: !e.forAdmission },
+      });
+      await load();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo cambiar");
     }
   }
 
@@ -95,8 +110,10 @@ export default function EbooksAdminPage() {
         Biblioteca (E-Books)
       </h1>
       <p className="mb-6 text-sm text-gray-500">
-        Material de apoyo descargable para los estudiantes. Sube PDFs u otros
-        documentos; aparecen en el portal del alumno, sección Biblioteca.
+        Material de apoyo descargable. Sube PDFs u otros documentos: los de
+        la biblioteca los ven los alumnos; los marcados como{" "}
+        <b>material de admisión</b> los ven solo los aspirantes, para
+        prepararse para el examen.
       </p>
 
       <form
@@ -169,6 +186,23 @@ export default function EbooksAdminPage() {
             className="text-sm"
           />
         </div>
+        <label className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={forAdmission}
+            onChange={(e) => setForAdmission(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-medium text-amber-900">
+              Material de admisión (para aspirantes)
+            </span>
+            <span className="block text-xs text-gray-500">
+              Guías o temarios para preparar el examen. Solo lo ven los
+              aspirantes, en “Material de estudio”.
+            </span>
+          </span>
+        </label>
         <button
           type="submit"
           disabled={busy || !title.trim() || !file}
@@ -195,7 +229,14 @@ export default function EbooksAdminPage() {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-gray-800">{e.title}</p>
+                <p className="truncate font-medium text-gray-800">
+                  {e.title}
+                  {e.forAdmission && (
+                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                      Admisión
+                    </span>
+                  )}
+                </p>
                 <p className="truncate text-xs text-gray-500">
                   {[e.category, e.author, e.sizeLabel].filter(Boolean).join(" · ")}
                 </p>
@@ -208,6 +249,17 @@ export default function EbooksAdminPage() {
               >
                 Ver
               </a>
+              <button
+                onClick={() => void moverAdmision(e)}
+                title={
+                  e.forAdmission
+                    ? "Pasar a la biblioteca de alumnos"
+                    : "Pasar a material de admisión (aspirantes)"
+                }
+                className="text-xs text-gray-600 hover:underline"
+              >
+                {e.forAdmission ? "A alumnos" : "A admisión"}
+              </button>
               <button
                 onClick={() => void eliminar(e.id)}
                 className="text-xs text-red-600 hover:underline"

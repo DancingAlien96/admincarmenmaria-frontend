@@ -261,6 +261,20 @@ function SolicitudAspirante({
             <p className="mt-4 text-xs text-gray-400">
               El estado del pago lo ves en la sección Pagos.
             </p>
+            <Link
+              href="/portal/ebooks"
+              className="mt-4 flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm hover:bg-brand-50"
+            >
+              <span>
+                <span className="block font-medium text-brand-800">
+                  📚 Material de estudio
+                </span>
+                <span className="text-xs text-gray-500">
+                  Guías para preparar tu examen de admisión
+                </span>
+              </span>
+              <span className="text-brand-600">→</span>
+            </Link>
           </section>
         </>
       )}

@@ -19,6 +19,7 @@ const NAV = [
 // Mientras no es alumno admitido: solicitud, pago del examen y documentos
 const NAV_ASPIRANTE = [
   { href: "/portal", label: "Mi solicitud" },
+  { href: "/portal/ebooks", label: "Material de estudio" },
   { href: "/portal/pagos", label: "Pagos" },
   { href: "/portal/documentos", label: "Documentación" },
   { href: "/portal/cuenta", label: "Cambiar contraseña" },

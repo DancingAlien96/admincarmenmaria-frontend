@@ -177,6 +177,8 @@ export interface Ebook {
   sizeLabel: string | null;
   active: boolean;
   createdAt: string;
+  // Material de estudio para el examen de admisión (aspirantes)
+  forAdmission?: boolean;
 }
 
 export const EBOOK_CATEGORIES = [
