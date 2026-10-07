@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -45,7 +46,7 @@ export default function NewActaPage() {
   return (
     <div>
       <Link href="/panel/actas" className="text-sm text-brand-600 hover:underline">
-        ← Volver a actas
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a actas
       </Link>
       <h1 className="mb-6 mt-2 text-2xl font-bold text-brand-800">Nueva acta</h1>
       <ActaForm submitLabel="Crear acta" onSubmit={handleSubmit} />

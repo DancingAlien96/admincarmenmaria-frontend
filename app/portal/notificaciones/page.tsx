@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleCheck, FileText, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { PortalNotif, PortalNotifs } from "@/lib/types";
@@ -35,7 +36,11 @@ function fmtFecha(iso: string) {
 }
 
 function icono(tipo: PortalNotif["tipo"]) {
-  return tipo === "pago" ? "💰" : "📄";
+  return tipo === "pago" ? (
+    <Wallet aria-hidden className="h-6 w-6 text-brand-600" />
+  ) : (
+    <FileText aria-hidden className="h-6 w-6 text-brand-600" />
+  );
 }
 
 export default function PortalNotificacionesPage() {
@@ -63,7 +68,7 @@ export default function PortalNotificacionesPage() {
 
       {data.items.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-3xl">✅</p>
+          <CircleCheck aria-hidden className="mx-auto h-9 w-9 text-green-500" />
           <p className="mt-2 text-gray-600">¡Estás al día!</p>
           <p className="text-sm text-gray-400">
             No tienes cuotas próximas ni documentos pendientes.

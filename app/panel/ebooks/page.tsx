@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
@@ -226,7 +227,7 @@ export default function EbooksAdminPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={e.coverUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-xl">📘</span>
+                  <BookOpen aria-hidden className="h-5 w-5 text-gray-400" />
                 )}
               </span>
               <div className="min-w-0 flex-1">
@@ -370,7 +371,7 @@ function EditEbookModal({
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={shown} alt="" className="h-full w-full object-contain" />
               ) : (
-                <span className="text-4xl">📘</span>
+                <BookOpen aria-hidden className="h-10 w-10 text-gray-300" />
               )}
             </span>
             <label className="cursor-pointer text-xs font-medium text-brand-600 hover:underline">

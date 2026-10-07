@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -48,7 +49,7 @@ export default function DocenteInicioPage() {
           href="/docente/calificaciones"
           className="flex flex-col justify-center rounded-xl border border-brand-200 bg-brand-50 p-5 hover:bg-brand-100"
         >
-          <p className="font-semibold text-brand-800">Ingresar calificaciones →</p>
+          <p className="font-semibold text-brand-800">Ingresar calificaciones <ArrowRight aria-hidden className="ml-1 inline h-4 w-4 align-[-3px]" /></p>
           <p className="text-xs text-brand-700/80">
             Busca a un estudiante y registra sus notas por fase.
           </p>

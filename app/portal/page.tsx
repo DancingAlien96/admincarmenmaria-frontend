@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight, Check, Library } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import Link from "next/link";
@@ -250,7 +251,7 @@ function SolicitudAspirante({
                         : "bg-gray-100 text-gray-500"
                     }`}
                   >
-                    {p.hecho ? "✓" : i + 1}
+                    {p.hecho ? <Check aria-hidden className="h-4 w-4" strokeWidth={3} /> : i + 1}
                   </span>
                   <span className={p.hecho ? "text-gray-800" : "text-gray-500"}>
                     {p.titulo}
@@ -266,14 +267,15 @@ function SolicitudAspirante({
               className="mt-4 flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3 text-sm hover:bg-brand-50"
             >
               <span>
-                <span className="block font-medium text-brand-800">
-                  📚 Material de estudio
+                <span className="flex items-center gap-1.5 font-medium text-brand-800">
+                  <Library aria-hidden className="h-4 w-4" />
+                  Material de estudio
                 </span>
                 <span className="text-xs text-gray-500">
                   Guías para preparar tu examen de admisión
                 </span>
               </span>
-              <span className="text-brand-600">→</span>
+              <ArrowRight aria-hidden className="h-4 w-4 text-brand-600" />
             </Link>
           </section>
         </>

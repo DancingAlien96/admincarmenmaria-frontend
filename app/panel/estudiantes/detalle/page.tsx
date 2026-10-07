@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft, ArrowRight, Check, CircleCheck, X } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -146,7 +147,7 @@ function StudentDetailInner() {
         href="/panel/estudiantes"
         className="text-sm text-brand-600 hover:underline"
       >
-        ← Volver a expedientes
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a expedientes
       </Link>
 
       <div className="mb-6 mt-2 flex flex-wrap items-center justify-between gap-3">
@@ -226,9 +227,10 @@ function StudentDetailInner() {
       {portalCreds && (
         <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm">
           <p className="mb-2 font-medium text-emerald-800">
+            <CircleCheck aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />
             {portalCreds.reset
-              ? "✓ Contraseña restablecida. Estas son las credenciales del estudiante para entrar al Campus:"
-              : "✓ Cuenta creada. Estas son las credenciales del estudiante para entrar al Campus:"}
+              ? "Contraseña restablecida. Estas son las credenciales del estudiante para entrar al Campus:"
+              : "Cuenta creada. Estas son las credenciales del estudiante para entrar al Campus:"}
           </p>
           <div className="mb-2 grid gap-1 text-gray-700">
             <div>
@@ -498,7 +500,7 @@ function CuotasCard({
                         key={p.id}
                         className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500"
                       >
-                        <span className="text-green-600">✓</span>
+                        <Check aria-hidden className="h-3.5 w-3.5 text-green-600" />
                         <span className="font-medium text-gray-700">
                           {formatGTQ(p.amount - p.discount)}
                         </span>
@@ -1136,9 +1138,10 @@ function FasesCard({
                       {canEdit && (
                         <button
                           onClick={() => void eliminar(it.id)}
-                          className="text-xs text-red-600 hover:underline"
+                          className="text-red-600 hover:text-red-700"
+                          aria-label="Eliminar"
                         >
-                          ✕
+                          <X aria-hidden className="h-4 w-4" />
                         </button>
                       )}
                     </li>
@@ -1778,7 +1781,12 @@ function HistoryCard({ student }: { student: StudentDetail }) {
         {student.statusHistory.map((h) => (
           <li key={h.id} className="border-l-2 border-brand-200 pl-3">
             <p className="text-sm font-medium text-gray-800">
-              {h.fromStatus ? `${STATUS_LABELS[h.fromStatus]} → ` : ""}
+              {h.fromStatus && (
+                <>
+                  {STATUS_LABELS[h.fromStatus]}
+                  <ArrowRight aria-hidden className="mx-1 inline h-3.5 w-3.5 align-[-2px] text-gray-400" />
+                </>
+              )}
               {STATUS_LABELS[h.toStatus]}
             </p>
             <p className="text-xs text-gray-400">

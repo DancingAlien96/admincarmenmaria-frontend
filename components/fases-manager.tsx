@@ -1,5 +1,6 @@
 "use client";
 
+import { ClipboardList, FileText, FlaskConical, Library, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
@@ -11,11 +12,11 @@ const FASES = [
   { fase: 3, nombre: "Fase III", subtitulo: "Práctica Supervisada" },
 ];
 
-const SECCIONES: { kind: FaseItemKind; titulo: string; icon: string }[] = [
-  { kind: "TAREA", titulo: "Tareas", icon: "📝" },
-  { kind: "ACTIVIDAD", titulo: "Actividades", icon: "🧪" },
-  { kind: "EXAMEN", titulo: "Exámenes", icon: "📄" },
-  { kind: "MATERIAL", titulo: "Materiales", icon: "📚" },
+const SECCIONES: { kind: FaseItemKind; titulo: string; icon: LucideIcon }[] = [
+  { kind: "TAREA", titulo: "Tareas", icon: ClipboardList },
+  { kind: "ACTIVIDAD", titulo: "Actividades", icon: FlaskConical },
+  { kind: "EXAMEN", titulo: "Exámenes", icon: FileText },
+  { kind: "MATERIAL", titulo: "Materiales", icon: Library },
 ];
 
 function sizeLabel(bytes: number): string {
@@ -106,7 +107,7 @@ function SeccionCard({
   fase,
   kind,
   titulo,
-  icon,
+  icon: Icon,
   items,
   onChange,
   onDelete,
@@ -114,7 +115,7 @@ function SeccionCard({
   fase: number;
   kind: FaseItemKind;
   titulo: string;
-  icon: string;
+  icon: LucideIcon;
   items: FaseContentItem[];
   onChange: () => void;
   onDelete: (id: string) => void;
@@ -178,8 +179,9 @@ function SeccionCard({
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="font-semibold text-brand-800">
-          {icon} {titulo}
+        <h2 className="flex items-center gap-2 font-semibold text-brand-800">
+          <Icon aria-hidden className="h-5 w-5" />
+          {titulo}
         </h2>
         <button
           onClick={() => setAdding((v) => !v)}

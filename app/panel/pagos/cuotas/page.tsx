@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
@@ -45,7 +46,7 @@ export default function FeesPage() {
   return (
     <div>
       <Link href="/panel/pagos" className="text-sm text-brand-600 hover:underline">
-        ← Volver a pagos
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a pagos
       </Link>
       <div className="mb-6 mt-2 flex flex-wrap items-center justify-between gap-3">
         <div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Circle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { StudentChecklist } from "@/lib/types";
@@ -71,7 +72,7 @@ export default function PortalDocumentosPage() {
                     : "bg-gray-100 text-gray-400"
                 }`}
               >
-                {it.delivered ? "✓" : "•"}
+                {it.delivered ? <Check aria-hidden className="h-4 w-4" strokeWidth={3} /> : <Circle aria-hidden className="h-2 w-2 fill-current" />}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-800">{it.name}</p>

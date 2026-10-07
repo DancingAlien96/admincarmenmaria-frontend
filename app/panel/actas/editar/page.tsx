@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -95,7 +96,7 @@ function EditActaInner() {
   return (
     <div>
       <Link href={`/panel/actas/detalle?id=${id}`} className="text-sm text-brand-600 hover:underline">
-        ← Volver al acta
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver al acta
       </Link>
       <h1 className="mb-6 mt-2 text-2xl font-bold text-brand-800">Editar acta</h1>
       <ActaForm initial={initial} submitLabel="Guardar cambios" onSubmit={handleSubmit} />

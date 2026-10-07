@@ -1,5 +1,6 @@
 "use client";
 
+import { User, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import {
@@ -75,7 +76,7 @@ export default function DocenteCalificacionesPage() {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={s.photoUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
-                          "👤"
+                          <User aria-hidden className="h-5 w-5 text-gray-400" />
                         )}
                       </span>
                       <span className="min-w-0">
@@ -216,9 +217,10 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
                       </span>
                       <button
                         onClick={() => void eliminar(it.id)}
-                        className="text-xs text-red-600 hover:underline"
+                        className="text-red-600 hover:text-red-700"
+                        aria-label="Eliminar"
                       >
-                        ✕
+                        <X aria-hidden className="h-4 w-4" />
                       </button>
                     </li>
                   ))}

@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -66,7 +67,7 @@ function TeacherDetailInner() {
   return (
     <div>
       <Link href="/panel/catedraticos" className="text-sm text-brand-600 hover:underline">
-        ← Volver a catedráticos
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a catedráticos
       </Link>
 
       <div className="mb-6 mt-2 flex flex-wrap items-center justify-between gap-3">

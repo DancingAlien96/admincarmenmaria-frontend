@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDownLeft, ArrowUpRight, Paperclip, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -576,7 +577,7 @@ function BulkEmailCard() {
                       className="text-gray-400 hover:text-red-600"
                       aria-label={`Quitar a ${p.name}`}
                     >
-                      ✕
+                      <X aria-hidden className="h-3.5 w-3.5" />
                     </button>
                   </span>
                 ))}
@@ -620,7 +621,8 @@ function BulkEmailCard() {
                 e.target.value = "";
               }}
             />
-            {uploading ? "Subiendo…" : "📎 Adjuntar documentos o fotos"}
+            <Paperclip aria-hidden className="h-4 w-4" />
+            {uploading ? "Subiendo…" : "Adjuntar documentos o fotos"}
           </label>
           <span className="ml-2 text-xs text-gray-400">
             PDF o imágenes · máx. {MAX_FILES} archivos, {MAX_TOTAL_MB} MB
@@ -1048,7 +1050,18 @@ function MessageLog() {
             >
               <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
                 <span>
-                  {m.direction === "INBOUND" ? "⬅ Recibido" : "➡ Enviado"} ·{" "}
+                  {m.direction === "INBOUND" ? (
+                    <>
+                      <ArrowDownLeft aria-hidden className="mr-0.5 inline h-3.5 w-3.5 align-[-2px]" />
+                      Recibido
+                    </>
+                  ) : (
+                    <>
+                      <ArrowUpRight aria-hidden className="mr-0.5 inline h-3.5 w-3.5 align-[-2px]" />
+                      Enviado
+                    </>
+                  )}{" "}
+                  ·{" "}
                   {m.phone}
                   {m.student && ` · ${m.student.fullName}`}
                 </span>

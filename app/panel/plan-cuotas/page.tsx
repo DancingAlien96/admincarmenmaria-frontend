@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { formatGTQ } from "@/lib/labels";
@@ -425,7 +426,7 @@ function PropagateDialog({
               {oldAmount !== null ? (
                 <>
                   <span className="line-through">{formatGTQ(oldAmount)}</span>
-                  {" → "}
+                  <ArrowRight aria-hidden className="mx-1 inline h-3.5 w-3.5 align-[-2px]" />
                 </>
               ) : (
                 "Monto actual: "

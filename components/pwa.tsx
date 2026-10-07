@@ -1,5 +1,6 @@
 "use client";
 
+import { Share, X } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 // Evento de Chrome/Android para ofrecer la instalación de la app.
@@ -109,7 +110,7 @@ export function PwaSupport() {
             </p>
           ) : (
             <p className="text-gray-500">
-              En Safari toca <b>Compartir</b> (el cuadro con la flecha ↑) y
+              En Safari toca <b>Compartir</b> (<Share aria-hidden className="inline h-3.5 w-3.5 align-[-2px]" />) y
               luego <b>“Agregar a inicio”</b>.
             </p>
           )}
@@ -119,7 +120,7 @@ export function PwaSupport() {
           className="shrink-0 px-1 text-gray-400 hover:text-gray-600"
           aria-label="Cerrar"
         >
-          ✕
+          <X aria-hidden className="h-4 w-4" />
         </button>
       </div>
       {promptEvent && (

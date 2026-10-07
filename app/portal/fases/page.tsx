@@ -1,5 +1,6 @@
 "use client";
 
+import { GraduationCap, Paperclip } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import {
@@ -68,7 +69,7 @@ function FaseContenido({ items }: { items: FaseContentItem[] }) {
           <ul className="space-y-1.5">
             {materiales.map((it) => (
               <li key={it.id} className="flex items-center gap-2 text-sm">
-                <span>📎</span>
+                <Paperclip aria-hidden className="h-4 w-4 shrink-0 text-gray-400" />
                 <span className="min-w-0 flex-1 truncate text-gray-800">
                   {it.title}
                   {it.sizeLabel ? (
@@ -142,7 +143,7 @@ export default function PortalFasesPage() {
 
       {!hayNotas && content.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-3xl">🎓</p>
+          <GraduationCap aria-hidden className="mx-auto h-9 w-9 text-gray-300" />
           <p className="mt-2 text-gray-600">Aún no hay contenido en tus fases.</p>
           <p className="text-sm text-gray-400">
             Tus docentes irán publicando tareas, materiales y calificaciones aquí.

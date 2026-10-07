@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -43,7 +44,7 @@ function GraduateDetailInner() {
         href="/panel/diplomas"
         className="text-sm text-brand-600 hover:underline"
       >
-        ← Volver a la banca de diplomas
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a la banca de diplomas
       </Link>
 
       <div className="mb-6 mt-2 flex flex-wrap items-center gap-3">

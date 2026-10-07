@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft, CreditCard, Landmark } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { formatGTQ } from "@/lib/labels";
@@ -336,7 +337,7 @@ function RegistrarPagoModal({
               disabled={busy}
               className="flex w-full items-center gap-3 rounded-xl border border-brand-300 bg-brand-50 px-4 py-3 text-left hover:bg-brand-100 disabled:opacity-60"
             >
-              <span className="text-2xl">💳</span>
+              <CreditCard aria-hidden className="h-6 w-6 shrink-0 text-brand-700" />
               <span>
                 <span className="block font-medium text-brand-800">
                   {busy ? "Abriendo pago seguro…" : "Pagar con tarjeta"}
@@ -350,7 +351,7 @@ function RegistrarPagoModal({
               onClick={() => setMode("transfer")}
               className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left hover:bg-gray-50"
             >
-              <span className="text-2xl">🏦</span>
+              <Landmark aria-hidden className="h-6 w-6 shrink-0 text-brand-700" />
               <span>
                 <span className="block font-medium text-gray-800">
                   Transferencia bancaria
@@ -416,7 +417,7 @@ function RegistrarPagoModal({
                   onClick={() => setMode("choose")}
                   className="text-sm text-gray-500 hover:underline"
                 >
-                  ← Volver
+                  <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver
                 </button>
               ) : (
                 <span />

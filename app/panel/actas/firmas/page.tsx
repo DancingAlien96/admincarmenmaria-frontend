@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api, apiUrl, ApiError } from "@/lib/api";
@@ -103,7 +104,7 @@ export default function FirmasPage() {
     return (
       <div>
         <Link href="/panel/actas" className="text-sm text-brand-600 hover:underline">
-          ← Volver a actas
+          <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a actas
         </Link>
         <p className="mt-4 text-gray-500">
           Esta sección es solo para administradores.
@@ -115,7 +116,7 @@ export default function FirmasPage() {
   return (
     <div>
       <Link href="/panel/actas" className="text-sm text-brand-600 hover:underline">
-        ← Volver a actas
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a actas
       </Link>
       <h1 className="mb-1 mt-2 text-2xl font-bold text-brand-800">
         Firmas del personal

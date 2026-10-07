@@ -1,5 +1,6 @@
 "use client";
 
+import { PenLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import type {
@@ -382,7 +383,7 @@ export function ActaForm({ initial, submitLabel, onSubmit }: Props) {
               <input value={s.name} onChange={(e) => set("signers", v.signers.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} className={inputClass} placeholder="Nombre" />
               <input value={s.role} onChange={(e) => set("signers", v.signers.map((x, j) => j === i ? { ...x, role: e.target.value } : x))} className={`${inputClass} w-48`} placeholder="Cargo" />
               <span className="shrink-0 text-xs" title={s.signatureKey ? "Con firma registrada" : "Sin firma (solo texto)"}>
-                {s.signatureKey ? "✍️" : "—"}
+                {s.signatureKey ? <PenLine aria-hidden className="h-4 w-4 text-brand-600" /> : "—"}
               </span>
               <button type="button" onClick={() => set("signers", v.signers.filter((_, j) => j !== i))} className="shrink-0 text-xs text-red-600 hover:underline">Quitar</button>
             </div>

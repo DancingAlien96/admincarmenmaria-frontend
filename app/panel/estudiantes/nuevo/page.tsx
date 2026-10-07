@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -56,7 +57,7 @@ export default function NewStudentPage() {
         href="/panel/estudiantes"
         className="text-sm text-brand-600 hover:underline"
       >
-        ← Volver a expedientes
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a expedientes
       </Link>
       <h1 className="mb-6 mt-2 text-2xl font-bold text-brand-800">
         Nuevo expediente

@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, Check, KeyRound } from "lucide-react";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { api, ApiError, apiUrl } from "@/lib/api";
@@ -331,12 +332,12 @@ function InscripcionInner() {
                       )}
                       {photo && !photoBusy && (
                         <span className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-green-500 text-[10px] text-white">
-                          ✓
+                          <Check aria-hidden className="h-3 w-3" strokeWidth={3} />
                         </span>
                       )}
                     </>
                   ) : (
-                    <span className="text-3xl text-gray-300">📷</span>
+                    <Camera aria-hidden className="h-8 w-8 text-gray-300" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -651,7 +652,7 @@ function InscripcionInner() {
             </div>
           ) : (
             <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
-              🔑 Tu contraseña será tu <strong>DPI</strong> (sin espacios).
+              <KeyRound aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Tu contraseña será tu <strong>DPI</strong> (sin espacios).
               Podrás cambiarla después desde el portal, en “Cambiar contraseña”.
             </p>
           )}

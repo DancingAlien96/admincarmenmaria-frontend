@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
@@ -67,7 +68,7 @@ export default function VincularPagosPage() {
   return (
     <div>
       <Link href="/panel/pagos" className="text-sm text-brand-600 hover:underline">
-        ← Volver a pagos
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a pagos
       </Link>
       <h1 className="mb-1 mt-2 text-2xl font-bold text-brand-800">
         Vincular pagos a expedientes
@@ -120,7 +121,7 @@ export default function VincularPagosPage() {
 
                   {/* Sugerencia + selección */}
                   <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
-                    <span className="text-sm text-gray-400">→</span>
+                    <ArrowRight aria-hidden className="h-4 w-4 text-gray-400" />
                     <select
                       value={chosen[g.key] ?? ""}
                       onChange={(e) =>

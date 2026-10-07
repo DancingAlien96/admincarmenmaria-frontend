@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleCheck, CircleHelp, CircleX, Clock, Loader, TriangleAlert, type LucideIcon } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -30,20 +31,21 @@ function RetornoInner() {
       .catch(() => setEstado("error"));
   }, [sp]);
 
-  const meta: Record<Estado, { icon: string; title: string; text: string; color: string }> = {
-    cargando: { icon: "⏳", title: "Confirmando tu pago…", text: "Un momento, por favor.", color: "text-gray-600" },
-    aprobado: { icon: "✅", title: "¡Pago aprobado!", text: "Tu cuota quedó pagada. Te enviamos la confirmación por correo.", color: "text-green-700" },
-    rechazado: { icon: "❌", title: "Pago no completado", text: "El pago fue rechazado o cancelado. Puedes intentarlo de nuevo.", color: "text-red-700" },
-    revision: { icon: "🕓", title: "Pago en revisión", text: "Recibimos tu pago pero necesita confirmación de la escuela. Te avisaremos.", color: "text-amber-700" },
-    no_encontrado: { icon: "❓", title: "No encontramos el pago", text: "Si te cobraron, comunícate con la escuela.", color: "text-gray-700" },
-    error: { icon: "⚠️", title: "Ocurrió un problema", text: "No pudimos confirmar el pago. Si te cobraron, comunícate con la escuela.", color: "text-red-700" },
+  const meta: Record<Estado, { icon: LucideIcon; title: string; text: string; color: string }> = {
+    cargando: { icon: Loader, title: "Confirmando tu pago…", text: "Un momento, por favor.", color: "text-gray-600" },
+    aprobado: { icon: CircleCheck, title: "¡Pago aprobado!", text: "Tu cuota quedó pagada. Te enviamos la confirmación por correo.", color: "text-green-700" },
+    rechazado: { icon: CircleX, title: "Pago no completado", text: "El pago fue rechazado o cancelado. Puedes intentarlo de nuevo.", color: "text-red-700" },
+    revision: { icon: Clock, title: "Pago en revisión", text: "Recibimos tu pago pero necesita confirmación de la escuela. Te avisaremos.", color: "text-amber-700" },
+    no_encontrado: { icon: CircleHelp, title: "No encontramos el pago", text: "Si te cobraron, comunícate con la escuela.", color: "text-gray-700" },
+    error: { icon: TriangleAlert, title: "Ocurrió un problema", text: "No pudimos confirmar el pago. Si te cobraron, comunícate con la escuela.", color: "text-red-700" },
   };
   const m = meta[estado];
+  const Icon = m.icon;
 
   return (
     <div className="mx-auto max-w-md py-8 text-center">
       <div className="rounded-2xl border border-gray-200 bg-white p-8">
-        <p className="text-5xl">{m.icon}</p>
+        <Icon aria-hidden className={`mx-auto h-14 w-14 ${m.color} ${estado === "cargando" ? "animate-spin" : ""}`} />
         <h1 className={`mt-3 text-xl font-bold ${m.color}`}>{m.title}</h1>
         <p className="mt-2 text-sm text-gray-500">{m.text}</p>
         <Link

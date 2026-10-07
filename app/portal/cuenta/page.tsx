@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleCheck } from "lucide-react";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 
@@ -51,7 +52,7 @@ export default function PortalCuentaPage() {
 
       {ok && (
         <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          ✓ Tu contraseña se cambió correctamente.
+          <CircleCheck aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Tu contraseña se cambió correctamente.
         </div>
       )}
       {error && (

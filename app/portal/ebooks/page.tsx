@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, Library } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -46,7 +47,7 @@ export default function PortalEbooksPage() {
 
       {ebooks.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-3xl">📚</p>
+          <Library aria-hidden className="mx-auto h-9 w-9 text-gray-300" />
           <p className="mt-2 text-gray-600">Aún no hay material disponible.</p>
           <p className="text-sm text-gray-400">
             La escuela irá agregando libros y guías aquí.
@@ -88,7 +89,7 @@ export default function PortalEbooksPage() {
                       className="h-full w-auto max-w-full rounded object-contain shadow-md"
                     />
                   ) : (
-                    <span className="text-5xl">📘</span>
+                    <BookOpen aria-hidden className="h-12 w-12 text-brand-200" />
                   )}
                 </div>
                 <div className="flex flex-1 flex-col p-4">

@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
@@ -111,7 +112,7 @@ export default function TemplatesPage() {
   return (
     <div>
       <Link href="/panel/actas" className="text-sm text-brand-600 hover:underline">
-        ← Volver a actas
+        <ArrowLeft aria-hidden className="mr-1 inline h-4 w-4 align-[-3px]" />Volver a actas
       </Link>
       <div className="mb-6 mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-brand-800">Plantillas de acta</h1>
