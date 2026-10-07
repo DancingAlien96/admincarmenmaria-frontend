@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
+import { uploadFile, type UploadedFile } from "@/lib/upload";
 import type {
   BotConfig,
   Pagination,
@@ -85,40 +86,136 @@ function EmailTestCard() {
   );
 }
 
+type Audience = "students" | "teachers" | "custom";
+
+interface PickedPerson {
+  id: string;
+  kind: "student" | "teacher";
+  name: string;
+  email: string;
+}
+
+const MAX_FILES = 5;
+const MAX_TOTAL_MB = 15;
+
 function BulkEmailCard() {
   const nowY = new Date().getFullYear();
   const years = Array.from({ length: 6 }, (_, i) => nowY + 1 - i);
+  const [audience, setAudience] = useState<Audience>("students");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [year, setYear] = useState("");
+  // Personas específicas
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState<PickedPerson[]>([]);
+  const [picked, setPicked] = useState<PickedPerson[]>([]);
+  const [extraEmails, setExtraEmails] = useState("");
+  // Adjuntos (ya subidos al servidor)
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  async function enviar() {
-    if (
-      !confirm(
-        year
-          ? `Se enviará el correo a todos los estudiantes activos de la promoción ${year}. ¿Continuar?`
-          : "Se enviará el correo a TODOS los estudiantes activos con correo. ¿Continuar?"
-      )
-    )
+  // Búsqueda de alumnos y catedráticos con correo
+  useEffect(() => {
+    if (audience !== "custom" || search.trim().length < 2) return;
+    const t = setTimeout(() => {
+      api<{
+        students: { id: string; fullName: string; email: string }[];
+        teachers: { id: string; fullName: string; email: string }[];
+      }>(`/api/whatsapp/email-recipients?search=${encodeURIComponent(search.trim())}`)
+        .then((r) =>
+          setResults([
+            ...r.students.map((s) => ({
+              id: s.id,
+              kind: "student" as const,
+              name: s.fullName,
+              email: s.email,
+            })),
+            ...r.teachers.map((t) => ({
+              id: t.id,
+              kind: "teacher" as const,
+              name: t.fullName,
+              email: t.email,
+            })),
+          ])
+        )
+        .catch(() => setResults([]));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search, audience]);
+
+  // Solo se muestran resultados mientras hay una búsqueda válida
+  const shownResults =
+    audience === "custom" && search.trim().length >= 2 ? results : [];
+  const emailList = extraEmails
+    .split(/[\s,;]+/)
+    .map((e) => e.trim())
+    .filter(Boolean);
+  const totalBytes = files.reduce((s, f) => s + f.size, 0);
+
+  async function addFiles(list: FileList | null) {
+    if (!list || list.length === 0) return;
+    const incoming = Array.from(list);
+    if (files.length + incoming.length > MAX_FILES) {
+      alert(`Máximo ${MAX_FILES} archivos adjuntos.`);
       return;
+    }
+    setUploading(true);
+    try {
+      const uploaded: UploadedFile[] = [];
+      for (const f of incoming) uploaded.push(await uploadFile(f));
+      const next = [...files, ...uploaded];
+      if (next.reduce((s, f) => s + f.size, 0) > MAX_TOTAL_MB * 1024 * 1024) {
+        alert(`Los adjuntos no pueden pasar de ${MAX_TOTAL_MB} MB en total.`);
+        return;
+      }
+      setFiles(next);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo subir el archivo");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function destinoTexto() {
+    if (audience === "teachers") return "a todos los catedráticos con correo";
+    if (audience === "custom") {
+      const n = picked.length + emailList.length;
+      return `a ${n} persona(s) seleccionada(s)`;
+    }
+    return year
+      ? `a todos los estudiantes activos de la promoción ${year}`
+      : "a TODOS los estudiantes activos con correo";
+  }
+
+  async function enviar() {
+    if (!confirm(`Se enviará el correo ${destinoTexto()}. ¿Continuar?`)) return;
     setBusy(true);
     setMsg(null);
     try {
-      const r = await api<{ total: number; sent: number; skipped: number }>(
-        "/api/whatsapp/bulk-email",
-        {
-          method: "POST",
-          body: { subject, message, year: year ? Number(year) : undefined },
-        }
-      );
+      const r = await api<{ queued: number }>("/api/whatsapp/bulk-email", {
+        method: "POST",
+        body: {
+          subject,
+          message,
+          audience,
+          year: audience === "students" && year ? Number(year) : undefined,
+          studentIds: picked.filter((p) => p.kind === "student").map((p) => p.id),
+          teacherIds: picked.filter((p) => p.kind === "teacher").map((p) => p.id),
+          emails: emailList,
+          attachments: files.map((f) => ({ key: f.key, name: f.name })),
+        },
+      });
       setMsg({
         ok: true,
-        text: `Enviados ${r.sent} de ${r.total} (${r.skipped} sin correo o con error).`,
+        text: `Enviando a ${r.queued} destinatario(s). Puede tardar unos minutos; puedes seguir trabajando.`,
       });
       setSubject("");
       setMessage("");
+      setFiles([]);
+      setPicked([]);
+      setExtraEmails("");
     } catch (err) {
       setMsg({
         ok: false,
@@ -129,21 +226,42 @@ function BulkEmailCard() {
     }
   }
 
+  const sinDestino =
+    audience === "custom" && picked.length === 0 && emailList.length === 0;
+
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
       <h2 className="mb-1 font-semibold text-brand-800">Correo masivo</h2>
       <p className="mb-4 text-sm text-gray-500">
-        Envía un aviso por correo a todos los estudiantes o a una promoción
-        (inicio de clases, reunión, requisitos, etc.).
+        Envía un aviso por correo a estudiantes, catedráticos o personas
+        específicas, con documentos o fotos adjuntos.
       </p>
       <div className="space-y-3">
-        <div className="flex flex-wrap gap-3">
-          <input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Asunto"
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          />
+        {/* Destinatarios */}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["students", "Estudiantes"],
+              ["teachers", "Catedráticos"],
+              ["custom", "Personas específicas"],
+            ] as [Audience, string][]
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setAudience(value)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium ${
+                audience === value
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {audience === "students" && (
           <select
             value={year}
             onChange={(e) => setYear(e.target.value)}
@@ -156,7 +274,93 @@ function BulkEmailCard() {
               </option>
             ))}
           </select>
-        </div>
+        )}
+
+        {audience === "custom" && (
+          <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="relative">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar estudiante o catedrático por nombre…"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+              {shownResults.length > 0 && (
+                <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                  {shownResults.map((r) => {
+                    const ya = picked.some(
+                      (p) => p.id === r.id && p.kind === r.kind
+                    );
+                    return (
+                      <li key={`${r.kind}-${r.id}`}>
+                        <button
+                          type="button"
+                          disabled={ya}
+                          onClick={() => {
+                            setPicked([...picked, r]);
+                            setSearch("");
+                            setResults([]);
+                          }}
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-brand-50 disabled:opacity-40"
+                        >
+                          <span className="min-w-0 truncate">
+                            {r.name}
+                            <span className="ml-1 text-xs text-gray-400">
+                              {r.email}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-xs text-gray-500">
+                            {r.kind === "student" ? "Estudiante" : "Catedrático"}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+            {picked.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {picked.map((p) => (
+                  <span
+                    key={`${p.kind}-${p.id}`}
+                    className="flex max-w-[16rem] items-center gap-1 rounded-full border border-brand-200 bg-white px-3 py-1 text-xs text-brand-800"
+                  >
+                    <span className="truncate">{p.name}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPicked(
+                          picked.filter(
+                            (x) => !(x.id === p.id && x.kind === p.kind)
+                          )
+                        )
+                      }
+                      className="text-gray-400 hover:text-red-600"
+                      aria-label={`Quitar a ${p.name}`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <textarea
+              value={extraEmails}
+              onChange={(e) => setExtraEmails(e.target.value)}
+              placeholder="Otros correos (opcional), separados por coma"
+              rows={2}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+        )}
+
+        <input
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          placeholder="Asunto"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -164,12 +368,61 @@ function BulkEmailCard() {
           rows={4}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
         />
+
+        {/* Adjuntos */}
+        <div>
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+            <input
+              type="file"
+              multiple
+              accept="application/pdf,image/*"
+              className="hidden"
+              disabled={uploading || files.length >= MAX_FILES}
+              onChange={(e) => {
+                void addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            {uploading ? "Subiendo…" : "📎 Adjuntar documentos o fotos"}
+          </label>
+          <span className="ml-2 text-xs text-gray-400">
+            PDF o imágenes · máx. {MAX_FILES} archivos, {MAX_TOTAL_MB} MB
+          </span>
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {files.map((f) => (
+                <li
+                  key={f.key}
+                  className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-1.5 text-xs"
+                >
+                  <span className="min-w-0 truncate text-gray-700">{f.name}</span>
+                  <span className="flex shrink-0 items-center gap-3 text-gray-400">
+                    {(f.size / 1024 / 1024).toFixed(1)} MB
+                    <button
+                      type="button"
+                      onClick={() => setFiles(files.filter((x) => x.key !== f.key))}
+                      className="text-red-600 hover:underline"
+                    >
+                      Quitar
+                    </button>
+                  </span>
+                </li>
+              ))}
+              <li className="text-right text-[11px] text-gray-400">
+                Total {(totalBytes / 1024 / 1024).toFixed(1)} MB
+              </li>
+            </ul>
+          )}
+        </div>
+
         <button
           onClick={() => void enviar()}
-          disabled={busy || !subject.trim() || !message.trim()}
+          disabled={
+            busy || uploading || sinDestino || !subject.trim() || !message.trim()
+          }
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
         >
-          {busy ? "Enviando…" : "Enviar correo masivo"}
+          {busy ? "Enviando…" : "Enviar correo"}
         </button>
         {msg && (
           <p
