@@ -21,6 +21,10 @@ import type {
 } from "@/lib/types";
 import { RegisterPaymentForm } from "@/components/register-payment-form";
 
+// Años para filtrar (del actual hacia atrás)
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 6 }, (_, i) => String(CURRENT_YEAR - i));
+
 export default function PaymentsPage() {
   const { user } = useAuth();
   const canEdit = canAccess(user, "PAYMENTS", "EDITOR");
@@ -29,6 +33,8 @@ export default function PaymentsPage() {
   const [status, setStatus] = useState<PaymentStatus | "">("ACTIVO");
   const [method, setMethod] = useState<PaymentMethod | "">("");
   const [unlinked, setUnlinked] = useState(false);
+  const [year, setYear] = useState("");
+  const [cohort, setCohort] = useState("");
   const [page, setPage] = useState(1);
 
   const [items, setItems] = useState<Payment[]>([]);
@@ -48,6 +54,8 @@ export default function PaymentsPage() {
       if (status) params.set("status", status);
       if (method) params.set("method", method);
       if (unlinked) params.set("unlinked", "true");
+      if (year) params.set("year", year);
+      if (cohort) params.set("cohort", cohort);
       params.set("page", String(page));
       const res = await api<{
         data: Payment[];
@@ -60,7 +68,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [source, status, method, unlinked, page]);
+  }, [source, status, method, unlinked, year, cohort, page]);
 
   useEffect(() => {
     void load();
@@ -206,6 +214,39 @@ export default function PaymentsPage() {
           <option value="">Todos los orígenes</option>
           <option value="MANUAL">Manual</option>
           <option value="WOOCOMMERCE">Tienda en línea</option>
+          <option value="PORTAL">Portal del alumno</option>
+        </select>
+        <select
+          value={year}
+          onChange={(e) => {
+            setYear(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          title="Año en que se realizó el pago"
+        >
+          <option value="">Pagos de todos los años</option>
+          {YEARS.map((y) => (
+            <option key={y} value={y}>
+              Pagos de {y}
+            </option>
+          ))}
+        </select>
+        <select
+          value={cohort}
+          onChange={(e) => {
+            setCohort(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          title="Promoción (año de inscripción) del estudiante"
+        >
+          <option value="">Todas las promociones</option>
+          {YEARS.map((y) => (
+            <option key={y} value={y}>
+              Promoción {y}
+            </option>
+          ))}
         </select>
         <select
           value={method}

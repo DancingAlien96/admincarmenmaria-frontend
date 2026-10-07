@@ -364,6 +364,7 @@ function CuotasCard({
 }) {
   const [data, setData] = useState<StudentAccount | null>(null);
   const [payFor, setPayFor] = useState<string | null>(null);
+  const [mover, setMover] = useState(false);
 
   const reload = useCallback(async () => {
     setData(await api<StudentAccount>(`/api/charges/student/${studentId}`));
@@ -394,12 +395,31 @@ function CuotasCard({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold text-brand-800">Estado de cuenta (cuotas)</h2>
         {data && data.charges.length > 0 && (
-          <span className="text-sm text-gray-500">
-            Pagado {formatGTQ(data.summary.totalPaid)} · Saldo{" "}
-            {formatGTQ(data.summary.totalDue)}
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-gray-500">
+              Pagado {formatGTQ(data.summary.totalPaid)} · Saldo{" "}
+              {formatGTQ(data.summary.totalDue)}
+            </span>
+            {canGenerate && (
+              <button
+                onClick={() => setMover((v) => !v)}
+                className="text-xs font-medium text-brand-600 hover:underline"
+              >
+                {mover ? "Cerrar" : "Cambiar mes de inicio"}
+              </button>
+            )}
+          </div>
         )}
       </div>
+      {mover && (
+        <MoverPlan
+          studentId={studentId}
+          onDone={async () => {
+            setMover(false);
+            await reload();
+          }}
+        />
+      )}
       {boletasPendientes > 0 && (
         <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
           El estudiante envió {boletasPendientes} comprobante(s) de pago por
@@ -525,6 +545,70 @@ function CuotasCard({
         </ul>
       )}
     </section>
+  );
+}
+
+// Corre el plan de cuotas a otro mes de inicio (si se eligió mal).
+function MoverPlan({
+  studentId,
+  onDone,
+}: {
+  studentId: string;
+  onDone: () => void | Promise<void>;
+}) {
+  const now = new Date();
+  const [month, setMonth] = useState(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+  );
+  const [busy, setBusy] = useState(false);
+
+  async function mover(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const r = await api<{ moved: number; delta: number }>(
+        `/api/charges/student/${studentId}/reschedule`,
+        { method: "POST", body: { startMonth: month } }
+      );
+      alert(
+        r.delta === 0
+          ? "El plan ya inicia en ese mes; no se movió nada."
+          : `Se movieron ${r.moved} cuota(s) pendiente(s) ${Math.abs(r.delta)} mes(es) ${r.delta > 0 ? "hacia adelante" : "hacia atrás"}.`
+      );
+      await onDone();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo mover el plan");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={mover}
+      className="mb-4 rounded-lg border border-brand-200 bg-brand-50/50 p-3 text-sm"
+    >
+      <p className="mb-2 text-gray-700">
+        Elige en qué mes debe vencer la <b>próxima cuota pendiente</b>. Las
+        demás pendientes se corren los mismos meses; las pagadas no cambian.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          required
+          className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+        />
+        <button
+          type="submit"
+          disabled={busy}
+          className="rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        >
+          {busy ? "Moviendo…" : "Mover plan"}
+        </button>
+      </div>
+    </form>
   );
 }
 
