@@ -1026,6 +1026,7 @@ function RegistrarPagoInline({
 
 const GRADE_CATS: GradeCategory[] = [
   "TAREA",
+  "ACTIVIDAD",
   "PRIMER_PARCIAL",
   "SEGUNDO_PARCIAL",
   "EXAMEN_FINAL",
@@ -1118,7 +1119,20 @@ function FasesCard({
                   </span>
                 </p>
                 {f.promedio !== null && (
-                  <span className="text-sm text-gray-500">{f.promedio}</span>
+                  <span className="flex items-center gap-2 text-sm text-gray-500">
+                    {f.promedio}
+                    {f.resultado && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          f.resultado === "aprobada"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {f.resultado === "aprobada" ? "Aprobada" : "Reprobada"}
+                      </span>
+                    )}
+                  </span>
                 )}
               </div>
               {f.items.length === 0 ? (

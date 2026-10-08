@@ -1,6 +1,6 @@
 "use client";
 
-import { Brain, Check, ClipboardList, FileText, FlaskConical, Heart, Library, Star, X, type LucideIcon } from "lucide-react";
+import { Award, Brain, Check, ClipboardList, FileText, FlaskConical, Heart, Library, Star, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
@@ -66,6 +66,8 @@ export function FasesManager({
       </h1>
       <p className="mb-5 text-sm text-gray-500">{intro}</p>
 
+      <Criterios readOnly={readOnly} />
+
       {/* Tabs de fase */}
       <div className="mb-5 flex flex-wrap gap-2">
         {FASES.map((f) => (
@@ -87,6 +89,8 @@ export function FasesManager({
         <span className="font-semibold text-brand-800">{actual.nombre}</span> ·{" "}
         {actual.subtitulo}
       </p>
+
+      {items && <Ponderacion items={delFase} />}
 
       {!items ? (
         <p className="text-gray-400">Cargando…</p>
@@ -139,6 +143,8 @@ function SeccionCard({
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
   const [meta, setMeta] = useState("");
+  // Ponderación: cuántos puntos (sobre 100) vale en la nota de la fase
+  const [puntos, setPuntos] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -149,6 +155,7 @@ function SeccionCard({
     setDescription("");
     setDate("");
     setMeta("");
+    setPuntos("");
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setEditId(null);
@@ -161,6 +168,7 @@ function SeccionCard({
     setDescription(it.description ?? "");
     setDate(it.date ? it.date.slice(0, 10) : "");
     setMeta(it.meta ?? "");
+    setPuntos(it.puntos ? String(it.puntos) : "");
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setAdding(true);
@@ -189,6 +197,7 @@ function SeccionCard({
         description,
         date: date || null,
         meta: meta || null,
+        ...(esMaterial ? {} : { puntos: puntos === "" ? null : Number(puntos) }),
         fileUrl,
         fileKey,
         sizeLabel: size,
@@ -234,7 +243,14 @@ function SeccionCard({
           {items.map((it) => (
             <li key={it.id} className="flex items-start gap-3 py-2.5">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-gray-800">{it.title}</p>
+                <p className="text-sm font-medium text-gray-800">
+                  {it.title}
+                  {!!it.puntos && (
+                    <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+                      {it.puntos} pts
+                    </span>
+                  )}
+                </p>
                 {it.description && (
                   <p className="text-xs text-gray-500">{it.description}</p>
                 )}
@@ -298,7 +314,19 @@ function SeccionCard({
             rows={2}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
-          <div className="grid grid-cols-2 gap-2">
+          <div className={`grid gap-2 ${esMaterial ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
+            {!esMaterial && (
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={puntos}
+                onChange={(e) => setPuntos(e.target.value)}
+                placeholder="Puntos (ej. 10)"
+                title="Cuántos puntos vale en la nota de la fase (sobre 100)"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            )}
             <input
               type="date"
               value={date}
@@ -595,5 +623,138 @@ function EncuestaResultados({ fase }: { fase: number }) {
         </div>
       )}
     </section>
+  );
+}
+
+// Total de puntos de la fase (la nota se calcula sobre 100)
+function Ponderacion({ items }: { items: FaseContentItem[] }) {
+  const evaluables = items.filter((i) => i.kind !== "MATERIAL");
+  const total = evaluables.reduce((s, i) => s + (i.puntos ?? 0), 0);
+  const sinPuntos = evaluables.filter((i) => !i.puntos).length;
+  const ok = total === 100;
+  const pct = Math.min(100, total);
+  return (
+    <div
+      className={`mb-5 rounded-xl border p-4 ${
+        total === 0 ? "border-gray-200 bg-white" : ok ? "border-green-200 bg-green-50/50" : "border-amber-200 bg-amber-50/50"
+      }`}
+    >
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="font-semibold text-gray-800">Ponderación de la fase</span>
+        <span className={`font-bold ${ok ? "text-green-700" : total === 0 ? "text-gray-500" : "text-amber-700"}`}>
+          {total} / 100 pts
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-gray-100">
+        <div
+          className={`h-full rounded-full ${ok ? "bg-green-500" : total > 100 ? "bg-red-500" : "bg-amber-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-gray-500">
+        {total === 0
+          ? "Asigna puntos a cada tarea, actividad y examen. Mientras ninguna tenga puntos, la nota se calcula por categoría (Tareas 50 %, Parciales 30 %, Examen final 20 %)."
+          : ok
+            ? "Los puntos de la fase suman 100. La nota del estudiante es la suma de los puntos que obtenga."
+            : total > 100
+              ? `Los puntos suman ${total}: pasan de 100. Ajusta los valores.`
+              : `Faltan ${100 - total} pts para completar 100.`}
+        {sinPuntos > 0 && total > 0 && ` Hay ${sinPuntos} elemento(s) sin puntos que no cuentan para la nota.`}
+      </p>
+    </div>
+  );
+}
+
+// Nota mínima para aprobar (todas las fases) y mínimo del Reto de Comprensión
+function Criterios({ readOnly }: { readOnly: boolean }) {
+  const [nota, setNota] = useState("");
+  const [reto, setReto] = useState("");
+  const [guardado, setGuardado] = useState<{ notaMinima: number; retoMinimo: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api<{ notaMinima: number; retoMinimo: number }>("/api/fase-extras/config")
+      .then((c) => {
+        setGuardado(c);
+        setNota(String(c.notaMinima));
+        setReto(String(c.retoMinimo));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  if (!guardado) return null;
+  const cambiado = nota !== String(guardado.notaMinima) || reto !== String(guardado.retoMinimo);
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const c = await api<{ notaMinima: number; retoMinimo: number }>("/api/fase-extras/config", {
+        method: "PUT",
+        body: { notaMinima: Number(nota), retoMinimo: Number(reto) },
+      });
+      setGuardado(c);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={guardar}
+      className="mb-5 flex flex-wrap items-end gap-4 rounded-xl border border-gray-200 bg-white p-4"
+    >
+      <div className="min-w-[200px] flex-1">
+        <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+          <Award aria-hidden className="h-4 w-4 text-brand-600" />
+          Criterios de aprobación
+        </p>
+        <p className="text-xs text-gray-500">
+          Aplican a todas las fases. Una fase completa con una nota menor queda
+          como reprobada.
+        </p>
+      </div>
+      <label className="text-xs text-gray-600">
+        <span className="mb-1 block">Nota mínima de la fase</span>
+        <span className="flex items-center gap-1">
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={nota}
+            disabled={readOnly}
+            onChange={(e) => setNota(e.target.value)}
+            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-50"
+          />
+          <span className="text-gray-400">/ 100</span>
+        </span>
+      </label>
+      <label className="text-xs text-gray-600">
+        <span className="mb-1 block">Mínimo del Reto</span>
+        <span className="flex items-center gap-1">
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={reto}
+            disabled={readOnly}
+            onChange={(e) => setReto(e.target.value)}
+            className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm disabled:bg-gray-50"
+          />
+          <span className="text-gray-400">%</span>
+        </span>
+      </label>
+      {!readOnly && (
+        <button
+          type="submit"
+          disabled={busy || !cambiado || !nota || !reto}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+        >
+          {busy ? "Guardando…" : "Guardar"}
+        </button>
+      )}
+    </form>
   );
 }

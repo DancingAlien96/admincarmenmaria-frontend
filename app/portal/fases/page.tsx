@@ -30,8 +30,8 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { FaseContentItem, FaseItem, StudentFases } from "@/lib/types";
 
-// Línea de aprobación de cada fase (sobre 100)
-const APROBACION = 70;
+// Nota mínima por defecto si el servidor no la envía
+const APROBACION_DEFAULT = 70;
 
 const ESTADO: Record<FaseItem["estado"], { label: string; chip: string; dot: string }> = {
   completado: { label: "Completado", chip: "bg-green-50 text-green-700", dot: "bg-green-500" },
@@ -44,6 +44,9 @@ const SECCION_COLOR: Record<string, { ring: string; dot: string }> = {
   tareas: { ring: "#f59e0b", dot: "bg-amber-500" },
   parciales: { ring: "var(--color-brand-600)", dot: "bg-brand-600" },
   final: { ring: "#16a34a", dot: "bg-green-600" },
+  // Ponderación por actividad
+  actividades: { ring: "var(--color-brand-400)", dot: "bg-brand-400" },
+  examenes: { ring: "#16a34a", dot: "bg-green-600" },
 };
 
 function fmtCorta(iso: string | null) {
@@ -105,6 +108,7 @@ export default function PortalFasesPage() {
   const enCurso = data.fases.findIndex((f) => f.estado !== "completado");
   const activa = sel ?? (enCurso === -1 ? data.fases.length - 1 : enCurso);
   const fase = data.fases[activa];
+  const aprobacion = data.notaMinima ?? APROBACION_DEFAULT;
   const del = content.filter((c) => c.fase === fase.fase);
 
   return (
@@ -204,20 +208,27 @@ export default function PortalFasesPage() {
                 big
               />
               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-xs">
-                {fase.promedio >= APROBACION ? (
+                {fase.promedio >= aprobacion ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 font-medium text-green-700">
                     <CircleCheck aria-hidden className="h-3.5 w-3.5" />
-                    {fase.estado === "completado" ? "Aprobado" : "Vas aprobando"}
+                    {fase.resultado === "aprobada" ? "Fase aprobada" : "Vas aprobando"}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 font-medium text-red-700">
-                    Por debajo de la aprobación
+                    {fase.resultado === "reprobada" ? "Fase reprobada" : "Por debajo de la nota mínima"}
                   </span>
                 )}
                 <span className="text-gray-500">
-                  Línea de aprobación: {APROBACION} pts
+                  Nota mínima para aprobar: {aprobacion} pts
                 </span>
               </div>
+              {fase.modo === "puntos" && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Llevas <b>{fase.puntosObtenidos}</b> de{" "}
+                  <b>{fase.puntosEvaluados}</b> pts evaluados · la fase vale{" "}
+                  {fase.puntosTotales} pts
+                </p>
+              )}
             </div>
             <div className="mx-auto mt-8 grid max-w-2xl grid-cols-3 gap-4 border-t border-gray-100 pt-8">
               {fase.desglose.map((d) => (
@@ -245,9 +256,13 @@ export default function PortalFasesPage() {
       </section>
 
       <Presentaciones items={del.filter((c) => c.kind === "MATERIAL")} />
-      <AreaTareas fase={fase} tareas={del.filter((c) => c.kind === "TAREA")} />
-      <Evaluaciones fase={fase} />
-      <Programado items={del.filter((c) => c.kind === "ACTIVIDAD" || c.kind === "EXAMEN")} />
+      <AreaTareas
+        aprobacion={aprobacion}
+        fase={fase}
+        tareas={del.filter((c) => c.kind === "TAREA" || c.kind === "ACTIVIDAD")}
+      />
+      <Evaluaciones fase={fase} aprobacion={aprobacion} />
+      <Programado items={del.filter((c) => c.kind === "EXAMEN")} />
       <Reto
         key={`reto-${fase.fase}`}
         fase={fase}
@@ -425,16 +440,33 @@ function Presentaciones({ items }: { items: FaseContentItem[] }) {
 }
 
 // Tareas: las calificadas (notas del alumno) y las asignadas aún sin nota
-function AreaTareas({ fase, tareas }: { fase: FaseItem; tareas: FaseContentItem[] }) {
-  const calificadas = fase.items.filter((i) => i.category === "TAREA");
+function AreaTareas({
+  fase,
+  tareas,
+  aprobacion,
+}: {
+  fase: FaseItem;
+  tareas: FaseContentItem[];
+  aprobacion: number;
+}) {
+  const calificadas = fase.items.filter(
+    (i) => i.category === "TAREA" || i.category === "ACTIVIDAD"
+  );
   const nombres = new Set(calificadas.map((c) => norm(c.name)));
-  const sinNota = tareas.filter((t) => !nombres.has(norm(t.title)));
+  const enlazadas = new Set(calificadas.map((c) => c.faseItemId).filter(Boolean));
+  const sinNota = tareas.filter(
+    (t) => !enlazadas.has(t.id) && !nombres.has(norm(t.title))
+  );
   const filas = [
     ...calificadas.map((g) => ({
       id: g.id,
       titulo: g.name,
       nota: `${g.score}/${g.maxScore}`,
       pct: g.pct,
+      puntos:
+        g.puntos != null && g.ptsObtenidos != null
+          ? `${g.ptsObtenidos} / ${g.puntos}`
+          : "—",
       fecha: g.date,
       calificado: true,
     })),
@@ -443,6 +475,7 @@ function AreaTareas({ fase, tareas }: { fase: FaseItem; tareas: FaseContentItem[
       titulo: t.title,
       nota: "—",
       pct: null as number | null,
+      puntos: t.puntos ? `vale ${t.puntos}` : "—",
       fecha: t.date,
       calificado: false,
     })),
@@ -453,7 +486,7 @@ function AreaTareas({ fase, tareas }: { fase: FaseItem; tareas: FaseContentItem[
         <SectionTitle
           icon={ClipboardList}
           tone="bg-gray-100 text-gray-600"
-          title="Área de Tareas"
+          title="Área de Tareas y Actividades"
           subtitle={`${filas.length} ${filas.length === 1 ? "tarea asignada" : "tareas asignadas"}`}
         />
       </div>
@@ -467,6 +500,7 @@ function AreaTareas({ fase, tareas }: { fase: FaseItem; tareas: FaseContentItem[
                 <th className="px-5 py-3">#</th>
                 <th className="px-5 py-3">Tarea</th>
                 <th className="px-5 py-3 text-center">Nota</th>
+                <th className="px-5 py-3 text-center">Puntos</th>
                 <th className="px-5 py-3 text-center">Entrega</th>
                 <th className="px-5 py-3 text-center">Estado</th>
               </tr>
@@ -481,13 +515,16 @@ function AreaTareas({ fase, tareas }: { fase: FaseItem; tareas: FaseContentItem[
                       className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
                         f.pct === null
                           ? "text-gray-400"
-                          : f.pct >= APROBACION
+                          : f.pct >= aprobacion
                             ? "bg-green-50 text-green-700"
                             : "bg-amber-50 text-amber-700"
                       }`}
                     >
                       {f.nota}
                     </span>
+                  </td>
+                  <td className="px-5 py-3 text-center text-xs font-medium text-gray-600">
+                    {f.puntos}
                   </td>
                   <td className="px-5 py-3 text-center text-gray-500">{fmtCorta(f.fecha)}</td>
                   <td className="px-5 py-3 text-center">
@@ -520,8 +557,10 @@ const EVAL_LABEL: Record<string, string> = {
 };
 
 // Parciales, examen final y recuperación con su barra
-function Evaluaciones({ fase }: { fase: FaseItem }) {
-  const evals = fase.items.filter((i) => i.category !== "TAREA");
+function Evaluaciones({ fase, aprobacion }: { fase: FaseItem; aprobacion: number }) {
+  const evals = fase.items.filter(
+    (i) => i.category !== "TAREA" && i.category !== "ACTIVIDAD"
+  );
   if (evals.length === 0) return null;
   return (
     <section>
@@ -543,7 +582,7 @@ function Evaluaciones({ fase }: { fase: FaseItem }) {
             <div className="flex items-end gap-4">
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
                 <div
-                  className={`h-full rounded-full ${e.pct >= APROBACION ? "bg-brand-600" : "bg-amber-500"}`}
+                  className={`h-full rounded-full ${e.pct >= aprobacion ? "bg-brand-600" : "bg-amber-500"}`}
                   style={{ width: `${Math.min(100, e.pct)}%` }}
                 />
               </div>

@@ -241,6 +241,7 @@ export const EBOOK_CATEGORIES = [
 
 export type GradeCategory =
   | "TAREA"
+  | "ACTIVIDAD"
   | "PRIMER_PARCIAL"
   | "SEGUNDO_PARCIAL"
   | "EXAMEN_FINAL"
@@ -248,6 +249,7 @@ export type GradeCategory =
 
 export const GRADE_CATEGORY_LABELS: Record<GradeCategory, string> = {
   TAREA: "Tarea",
+  ACTIVIDAD: "Actividad",
   PRIMER_PARCIAL: "Primer parcial",
   SEGUNDO_PARCIAL: "Segundo parcial",
   EXAMEN_FINAL: "Examen final",
@@ -262,6 +264,10 @@ export interface GradeItem {
   maxScore: number;
   pct: number;
   date: string | null;
+  // Ponderación por actividad
+  faseItemId?: string | null;
+  puntos?: number | null; // cuánto vale la actividad
+  ptsObtenidos?: number | null; // puntos que obtuvo
 }
 
 export interface FaseItem {
@@ -271,11 +277,18 @@ export interface FaseItem {
   items: GradeItem[];
   promedio: number | null;
   estado: "completado" | "en-progreso" | "pendiente";
+  // Resultado de la fase completa según la nota mínima
+  resultado?: "aprobada" | "reprobada" | null;
   // Reto de Comprensión de la fase (solo en el portal del alumno)
   reto?: { preguntas: number; aprobado: boolean };
   // Nota ponderada por sección (Tareas 50, Parciales 30, Examen final 20)
+  // "puntos": la fase pondera por actividad; "categorias": 50/30/20
+  modo?: "puntos" | "categorias";
+  puntosTotales?: number | null;
+  puntosEvaluados?: number | null;
+  puntosObtenidos?: number | null;
   desglose: {
-    clave: "tareas" | "parciales" | "final";
+    clave: "tareas" | "parciales" | "final" | "actividades" | "examenes";
     nombre: string;
     peso: number;
     evaluaciones: number;
@@ -287,6 +300,7 @@ export interface FaseItem {
 export interface StudentFases {
   fases: FaseItem[];
   promedioGeneral: number | null;
+  notaMinima?: number; // nota mínima para aprobar (todas las fases)
 }
 
 export type FaseItemKind = "TAREA" | "ACTIVIDAD" | "EXAMEN" | "MATERIAL";
@@ -308,6 +322,7 @@ export interface FaseContentItem {
   meta: string | null;
   fileUrl: string | null;
   sizeLabel: string | null;
+  puntos?: number | null; // ponderación (sobre 100) en la nota de la fase
 }
 
 export interface PendingBoleta {

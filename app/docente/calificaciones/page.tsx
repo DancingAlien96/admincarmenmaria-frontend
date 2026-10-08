@@ -20,6 +20,7 @@ interface DocenteStudent {
 
 const GRADE_CATS: GradeCategory[] = [
   "TAREA",
+  "ACTIVIDAD",
   "PRIMER_PARCIAL",
   "SEGUNDO_PARCIAL",
   "EXAMEN_FINAL",
@@ -129,13 +130,23 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
       .catch(() => setActividades([]));
   }, []);
 
-  const sugerencias = actividades.filter(
-    (a) =>
-      a.fase === Number(fase) &&
-      (category === "TAREA"
-        ? a.kind === "TAREA" || a.kind === "ACTIVIDAD"
-        : a.kind === "EXAMEN")
+  // Actividad que se califica (define cuántos puntos vale en la fase)
+  const [actividadId, setActividadId] = useState("");
+  const delaFase = actividades.filter(
+    (a) => a.fase === Number(fase) && a.kind !== "MATERIAL"
   );
+  const actividad = delaFase.find((a) => a.id === actividadId) ?? null;
+
+  function elegirActividad(id: string) {
+    setActividadId(id);
+    const a = delaFase.find((x) => x.id === id);
+    if (!a) return;
+    setName(a.title);
+    if (a.kind === "TAREA") setCategory("TAREA");
+    else if (a.kind === "ACTIVIDAD") setCategory("ACTIVIDAD");
+    else if (category === "TAREA" || category === "ACTIVIDAD") setCategory("PRIMER_PARCIAL");
+    if (a.date && !date) setDate(a.date.slice(0, 10));
+  }
 
   const reload = useCallback(async () => {
     setData(
@@ -162,8 +173,10 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
           score: Number(score),
           maxScore: Number(maxScore) || 100,
           date: date || null,
+          faseItemId: actividadId || null,
         },
       });
+      setActividadId("");
       setName("");
       setScore("");
       setDate("");
@@ -214,7 +227,20 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
                   </span>
                 </p>
                 {f.promedio !== null && (
-                  <span className="text-sm text-gray-500">{f.promedio}</span>
+                  <span className="flex items-center gap-2 text-sm text-gray-500">
+                    {f.promedio}
+                    {f.resultado && (
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          f.resultado === "aprobada"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {f.resultado === "aprobada" ? "Aprobada" : "Reprobada"}
+                      </span>
+                    )}
+                  </span>
                 )}
               </div>
               {f.items.length === 0 ? (
@@ -227,6 +253,9 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
                         <p className="truncate text-gray-700">{it.name}</p>
                         <p className="text-[11px] text-gray-400">
                           {GRADE_CATEGORY_LABELS[it.category]}
+                          {it.puntos != null && it.ptsObtenidos != null
+                            ? ` · ${it.ptsObtenidos}/${it.puntos} pts`
+                            : ""}
                         </p>
                       </div>
                       <span className="font-medium text-gray-800">
@@ -253,7 +282,10 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
         <div className="grid grid-cols-2 gap-2">
           <select
             value={fase}
-            onChange={(e) => setFase(e.target.value)}
+            onChange={(e) => {
+              setFase(e.target.value);
+              setActividadId("");
+            }}
             className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
           >
             <option value="1">Fase I</option>
@@ -272,28 +304,42 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
             ))}
           </select>
         </div>
-        <input
-          value={name}
+        <select
+          value={actividadId}
           onChange={(e) => {
-            setName(e.target.value);
-            // Si elige una actividad publicada, se usa su fecha
-            const act = sugerencias.find((a) => a.title === e.target.value);
-            if (act?.date && !date) setDate(act.date.slice(0, 10));
+            if (e.target.value) elegirActividad(e.target.value);
+            else {
+              setActividadId("");
+              setName("");
+            }
           }}
-          list="actividades-fase"
-          placeholder={
-            sugerencias.length > 0
-              ? "Elige la actividad o escribe el nombre"
-              : "Nombre (ej. Ensayo, Primer parcial…)"
-          }
-          required
           className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-        />
-        <datalist id="actividades-fase">
-          {sugerencias.map((a) => (
-            <option key={a.id} value={a.title} />
+        >
+          <option value="">
+            {delaFase.length > 0 ? "Elige la actividad que calificas…" : "Sin actividades publicadas en esta fase"}
+          </option>
+          {delaFase.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.title}
+              {a.puntos ? ` · vale ${a.puntos} pts` : ""}
+            </option>
           ))}
-        </datalist>
+        </select>
+        {!actividad && (
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="O escribe el nombre (si no está en la lista)"
+            required
+            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+          />
+        )}
+        {actividad?.puntos ? (
+          <p className="text-xs text-brand-700">
+            Esta actividad vale {actividad.puntos} pts de la fase: si saca{" "}
+            {maxScore || 100}/{maxScore || 100} obtiene los {actividad.puntos} pts.
+          </p>
+        ) : null}
         <div className="grid grid-cols-3 gap-2">
           <input
             type="number"

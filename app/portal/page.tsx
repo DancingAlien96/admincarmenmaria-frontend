@@ -155,7 +155,7 @@ export default function PortalDashboardPage() {
             <Legend className="border border-dashed border-gray-400 bg-white" label="Pendiente" />
           </div>
         </div>
-        {fases ? <FasesChart fases={fases.fases} /> : <p className="py-16 text-center text-sm text-gray-400">Cargando…</p>}
+        {fases ? <FasesChart fases={fases.fases} aprobacion={fases.notaMinima ?? 70} /> : <p className="py-16 text-center text-sm text-gray-400">Cargando…</p>}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-3">
@@ -306,10 +306,8 @@ function Legend({ className, label }: { className: string; label: string }) {
   );
 }
 
-// Gráfico de área con la nota de cada fase y la línea de aprobación (70).
-const APROBACION = 70;
-
-function FasesChart({ fases }: { fases: FaseItem[] }) {
+// Gráfico de área con la nota de cada fase y la línea de la nota mínima.
+function FasesChart({ fases, aprobacion }: { fases: FaseItem[]; aprobacion: number }) {
   const W = 900;
   const H = 280;
   const left = 40;
@@ -354,10 +352,10 @@ function FasesChart({ fases }: { fases: FaseItem[] }) {
         {area && <path d={area} fill="var(--color-brand-100)" opacity="0.55" />}
         {line && <path d={line} fill="none" stroke="var(--color-brand-600)" strokeWidth="3" />}
         {/* Línea de aprobación */}
-        <line x1={left} x2={right} y1={y(APROBACION)} y2={y(APROBACION)} stroke="#ef4444" strokeWidth="1.5" strokeDasharray="6 5" />
-        <rect x={left + 8} y={y(APROBACION) - 22} width="150" height="18" rx="9" fill="#ef4444" />
-        <text x={left + 18} y={y(APROBACION) - 9} fontSize="11" fontWeight="600" fill="#ffffff">
-          Aprobación: {APROBACION} pts
+        <line x1={left} x2={right} y1={y(aprobacion)} y2={y(aprobacion)} stroke="#ef4444" strokeWidth="1.5" strokeDasharray="6 5" />
+        <rect x={left + 8} y={y(aprobacion) - 22} width="150" height="18" rx="9" fill="#ef4444" />
+        <text x={left + 18} y={y(aprobacion) - 9} fontSize="11" fontWeight="600" fill="#ffffff">
+          Aprobación: {aprobacion} pts
         </text>
         {fases.map((f, i) =>
           f.promedio === null ? (
