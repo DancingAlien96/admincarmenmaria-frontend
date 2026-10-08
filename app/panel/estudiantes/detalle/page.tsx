@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, CircleCheck, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleCheck, FileSignature, FileText, X } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -20,6 +20,7 @@ import type {
   CuotaPlanItem,
   DocumentType,
   GradeCategory,
+  MatriculaInfo,
   PaymentMethod,
   StudentAccount,
   StudentChecklist,
@@ -300,6 +301,9 @@ function StudentDetailInner() {
                 refreshKey={pagosRefresh}
                 onGenerar={() => setShowPlan(true)}
               />
+            )}
+            {(student.status === "ACTIVO" || student.status === "EGRESADO") && (
+              <MatriculaCard studentId={id} canEdit={canEdit} />
             )}
             <ChecklistCard studentId={id} canEdit={canEdit} />
             <FasesCard studentId={id} canEdit={user?.role === "ADMIN"} />
@@ -1235,6 +1239,160 @@ function FasesCard({
                 </button>
               </div>
             </form>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Matrícula anual: el alumno sube el formulario firmado; aquí se revisa.
+function MatriculaCard({
+  studentId,
+  canEdit,
+}: {
+  studentId: string;
+  canEdit: boolean;
+}) {
+  const [data, setData] = useState<MatriculaInfo | null>(null);
+  const [rechazando, setRechazando] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const reload = useCallback(async () => {
+    setData(await api<MatriculaInfo>(`/api/matricula/student/${studentId}`));
+  }, [studentId]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  async function revisar(status: "APROBADA" | "RECHAZADA") {
+    if (!data?.actual) return;
+    setBusy(true);
+    try {
+      await api(`/api/matricula/${data.actual.id}/review`, {
+        method: "POST",
+        body: { status, note: status === "RECHAZADA" ? motivo : undefined },
+      });
+      setRechazando(false);
+      setMotivo("");
+      await reload();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!data) return null;
+  const m = data.actual;
+  const chip =
+    m?.status === "APROBADA"
+      ? "bg-green-50 text-green-700"
+      : m?.status === "RECHAZADA"
+        ? "bg-red-50 text-red-700"
+        : "bg-amber-50 text-amber-700";
+  const label =
+    m?.status === "APROBADA"
+      ? "Aprobada"
+      : m?.status === "RECHAZADA"
+        ? "Rechazada"
+        : "En revisión";
+
+  return (
+    <section
+      className={`rounded-xl border bg-white p-5 ${
+        m?.status === "EN_REVISION" ? "border-amber-300" : "border-gray-200"
+      }`}
+    >
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-semibold text-brand-800">
+          <FileSignature aria-hidden className="h-5 w-5" />
+          Matrícula {data.year}
+        </h2>
+        {m ? (
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${chip}`}>
+            {label}
+          </span>
+        ) : (
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+            Sin subir
+          </span>
+        )}
+      </div>
+
+      {!m ? (
+        <p className="text-sm text-gray-500">
+          El estudiante aún no ha subido su matrícula firmada de este año.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-gray-50 px-3 py-2 text-sm">
+            <FileText aria-hidden className="h-4 w-4 text-red-500" />
+            <span className="min-w-0 flex-1 truncate text-gray-700">
+              {m.fileName ?? "matricula.pdf"}
+              <span className="ml-2 text-xs text-gray-400">
+                {m.uploadedAt.slice(0, 10)}
+              </span>
+            </span>
+            <a
+              href={m.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-medium text-brand-600 hover:underline"
+            >
+              Ver PDF
+            </a>
+          </div>
+          {m.status === "RECHAZADA" && m.note && (
+            <p className="text-xs text-red-700">Motivo del rechazo: {m.note}</p>
+          )}
+          {canEdit && m.status === "EN_REVISION" && !rechazando && (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => void revisar("APROBADA")}
+                disabled={busy}
+                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-60"
+              >
+                Aprobar
+              </button>
+              <button
+                onClick={() => setRechazando(true)}
+                disabled={busy}
+                className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+              >
+                Rechazar
+              </button>
+            </div>
+          )}
+          {canEdit && m.status === "APROBADA" && (
+            <button
+              onClick={() => setRechazando(true)}
+              className="text-xs text-gray-500 hover:underline"
+            >
+              Marcar como rechazada
+            </button>
+          )}
+          {rechazando && (
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="Motivo (lo verá el estudiante)"
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs"
+              />
+              <button
+                onClick={() => void revisar("RECHAZADA")}
+                disabled={busy || !motivo.trim()}
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                Confirmar rechazo
+              </button>
+              <button onClick={() => setRechazando(false)} className="text-xs text-gray-500">
+                Cancelar
+              </button>
+            </div>
           )}
         </div>
       )}

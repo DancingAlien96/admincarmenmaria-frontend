@@ -49,6 +49,25 @@ export interface PortalMe {
   notifCount: number;
 }
 
+// Matrícula anual del alumno (PDF firmado)
+export interface MatriculaRegistro {
+  id: string;
+  year: number;
+  fileUrl: string;
+  fileName: string | null;
+  status: "EN_REVISION" | "APROBADA" | "RECHAZADA";
+  note: string | null;
+  uploadedAt: string;
+  reviewedAt: string | null;
+}
+
+export interface MatriculaInfo {
+  year: number;
+  template: { url: string; key: string; name: string } | null;
+  actual: MatriculaRegistro | null;
+  historial: MatriculaRegistro[];
+}
+
 // Actividad reciente del alumno (dashboard)
 export interface PortalEvento {
   id: string;

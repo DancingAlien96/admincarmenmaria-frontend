@@ -3,6 +3,7 @@
 import {
   Bell,
   BookOpen,
+  FileSignature,
   CircleDollarSign,
   Folder,
   KeyRound,
@@ -75,6 +76,7 @@ export default function PortalLayout({
         { href: "/portal/fases", label: "Fases", icon: Layers },
         { href: "/portal/pagos", label: "Pagos", icon: CircleDollarSign },
         { href: "/portal/documentos", label: "Documentación", icon: Folder },
+        { href: "/portal/matricula", label: "Matrícula", icon: FileSignature },
         { href: "/portal/ebooks", label: "E-Books", icon: BookOpen },
         { href: "/portal/notificaciones", label: "Notificaciones", icon: Bell, badge: notifCount },
       ];

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { FileSignature, FileText } from "lucide-react";
+import { uploadFile } from "@/lib/upload";
 import type { DocRequirement } from "@/lib/types";
 
 export default function DocumentosRequeridosPage() {
@@ -77,6 +79,8 @@ export default function DocumentosRequeridosPage() {
         quieras; los cambios se reflejan en todos los expedientes y en el portal
         del alumno.
       </p>
+
+      <MatriculaTemplateCard />
 
       <form onSubmit={agregar} className="mb-6 flex gap-2">
         <input
@@ -158,5 +162,101 @@ export default function DocumentosRequeridosPage() {
         </ul>
       )}
     </div>
+  );
+}
+
+// Formulario de matrícula (plantilla en PDF) que descargan los alumnos.
+function MatriculaTemplateCard() {
+  const [tpl, setTpl] = useState<{ url: string; key: string; name: string } | null>(null);
+  const [cargado, setCargado] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    api<{ template: { url: string; key: string; name: string } | null }>(
+      "/api/matricula/template"
+    )
+      .then((r) => setTpl(r.template))
+      .finally(() => setCargado(true));
+  }, []);
+
+  async function subir(file: File | undefined) {
+    if (!file) return;
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
+      alert("El formulario debe ser un PDF.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const up = await uploadFile(file);
+      const r = await api<{ template: typeof tpl }>("/api/matricula/template", {
+        method: "PUT",
+        body: { url: up.url, key: up.key, name: file.name },
+      });
+      setTpl(r.template);
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo subir");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function quitar() {
+    if (!confirm("¿Quitar el formulario de matrícula? Los alumnos ya no podrán descargarlo.")) return;
+    await api("/api/matricula/template", { method: "DELETE" });
+    setTpl(null);
+  }
+
+  return (
+    <section className="mb-8 rounded-xl border border-brand-200 bg-brand-50/40 p-5">
+      <h2 className="mb-1 flex items-center gap-2 font-semibold text-brand-800">
+        <FileSignature aria-hidden className="h-5 w-5" />
+        Formulario de matrícula
+      </h2>
+      <p className="mb-3 text-sm text-gray-600">
+        El PDF en blanco que los alumnos descargan, firman y suben en su
+        portal (sección Matrícula). La revisión se hace en el expediente de
+        cada alumno.
+      </p>
+      {!cargado ? (
+        <p className="text-sm text-gray-400">Cargando…</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          {tpl ? (
+            <a
+              href={tpl.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <FileText aria-hidden className="h-4 w-4 text-red-500" />
+              {tpl.name}
+            </a>
+          ) : (
+            <span className="text-sm text-gray-500">Aún no hay formulario publicado.</span>
+          )}
+          <label
+            className={`cursor-pointer rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 ${
+              busy ? "pointer-events-none opacity-60" : ""
+            }`}
+          >
+            {busy ? "Subiendo…" : tpl ? "Reemplazar PDF" : "Subir PDF"}
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                void subir(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {tpl && (
+            <button onClick={() => void quitar()} className="text-sm text-red-600 hover:underline">
+              Quitar
+            </button>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
