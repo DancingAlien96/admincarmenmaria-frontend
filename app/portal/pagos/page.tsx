@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowLeft, CreditCard, Landmark } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  CircleDollarSign,
+  Clock,
+  CreditCard,
+  Download,
+  Landmark,
+  Upload,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { formatGTQ } from "@/lib/labels";
@@ -8,49 +18,49 @@ import type { CuotaEstado, PortalCuota, PortalCuotas } from "@/lib/types";
 
 const ESTADO_META: Record<
   CuotaEstado,
-  { label: string; badge: string; dot: string }
+  { label: string; chip: string; dot: string }
 > = {
   pagado: {
-    label: "Pagado",
-    badge: "bg-green-50 text-green-700 border-green-200",
+    label: "Aprobado",
+    chip: "bg-green-50 text-green-700",
     dot: "bg-green-500",
   },
   parcial: {
     label: "Pago parcial",
-    badge: "bg-blue-50 text-blue-700 border-blue-200",
-    dot: "bg-blue-500",
+    chip: "bg-brand-50 text-brand-700",
+    dot: "bg-brand-500",
   },
   en_revision: {
     label: "En revisión",
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
+    chip: "bg-amber-50 text-amber-700",
     dot: "bg-amber-500",
   },
   vencido: {
     label: "Vencido",
-    badge: "bg-red-50 text-red-700 border-red-200",
+    chip: "bg-red-50 text-red-700",
     dot: "bg-red-500",
   },
   pendiente: {
     label: "Pendiente",
-    badge: "bg-gray-50 text-gray-600 border-gray-200",
-    dot: "bg-gray-300",
+    chip: "bg-gray-100 text-gray-600",
+    dot: "bg-gray-400",
   },
 };
 
-function fmtFecha(iso: string) {
-  const d = new Date(iso);
+function fmtFechaLarga(iso: string) {
   return new Intl.DateTimeFormat("es-GT", {
-    day: "2-digit",
-    month: "short",
+    day: "numeric",
+    month: "long",
     year: "numeric",
     timeZone: "UTC",
-  }).format(d);
+  }).format(new Date(iso));
 }
 
 export default function PortalPagosPage() {
   const [data, setData] = useState<PortalCuotas | null>(null);
   const [loading, setLoading] = useState(true);
   const [boletaFor, setBoletaFor] = useState<PortalCuota | null>(null);
+  const [descargando, setDescargando] = useState<string | null>(null);
   // Viene de la ficha de inscripción (paso 2: pagar el examen)
   const [desdeFicha, setDesdeFicha] = useState(false);
 
@@ -80,20 +90,46 @@ export default function PortalPagosPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Descarga el recibo PDF del pago aprobado de la cuota
+  async function descargarComprobante(c: PortalCuota) {
+    setDescargando(c.id);
+    try {
+      const res = await fetch(
+        `${apiUrl}/api/portal/cuotas/${c.id}/comprobante`,
+        { credentials: "include" }
+      );
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        throw new Error(j?.error ?? "No se pudo descargar el comprobante");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Comprobante ${c.concept}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudo descargar");
+    } finally {
+      setDescargando(null);
+    }
+  }
+
   if (loading || !data) {
     return <p className="text-gray-400">Cargando tu plan de cuotas…</p>;
   }
 
-  const { cuotas, summary, progress } = data;
+  const { cuotas, progress } = data;
   const pct =
     progress.total > 0
       ? Math.round((progress.pagadas / progress.total) * 100)
       : 0;
 
   return (
-    <div>
+    <div className="space-y-5">
       {desdeFicha && (
-        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           <p className="font-semibold">¡Tu ficha fue recibida!</p>
           <p>
             Paso 2 de 2: paga tu examen de admisión con tarjeta o sube tu
@@ -101,16 +137,11 @@ export default function PortalPagosPage() {
           </p>
         </div>
       )}
-      <h1 className="mb-1 text-xl font-bold text-brand-800 sm:text-2xl">
-        Mis pagos
-      </h1>
-      <p className="mb-6 text-sm text-gray-500">
-        Tu plan de cuotas y el estado de cada pago.
-      </p>
 
       {cuotas.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">
+        <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+          <CircleDollarSign aria-hidden className="mx-auto h-9 w-9 text-gray-300" />
+          <p className="mt-2 text-gray-600">
             Aún no tienes un plan de cuotas asignado.
           </p>
           <p className="mt-1 text-sm text-gray-400">
@@ -119,104 +150,149 @@ export default function PortalPagosPage() {
         </div>
       ) : (
         <>
-          {/* Progreso */}
-          <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-gray-700">
-                Progreso de pagos
-              </span>
-              <span className="text-gray-500">
-                {progress.pagadas} de {progress.total} cuotas · {pct}%
-              </span>
+          {/* Resumen */}
+          <section className="rounded-2xl border border-gray-200 bg-white p-5 sm:p-6">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  Pagos completados
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {progress.pagadas} de {progress.total} pagos realizados
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                  Aprobado
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  En revisión
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-gray-400" />
+                  Pendiente
+                </span>
+              </div>
             </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
               <div
                 className="h-full rounded-full bg-green-500 transition-all"
                 style={{ width: `${pct}%` }}
               />
             </div>
-          </div>
-
-          {/* Resumen */}
-          <div className="mb-6 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <p className="text-xs uppercase text-gray-500">Total pagado</p>
-              <p className="mt-1 text-2xl font-bold text-green-700">
-                {formatGTQ(summary.totalPaid)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <p className="text-xs uppercase text-gray-500">Saldo pendiente</p>
-              <p className="mt-1 text-2xl font-bold text-gray-800">
-                {formatGTQ(summary.totalDue)}
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-5">
-              <p className="text-xs uppercase text-gray-500">En mora</p>
-              <p
-                className={`mt-1 text-2xl font-bold ${
-                  summary.overdueAmount > 0 ? "text-red-600" : "text-gray-800"
-                }`}
-              >
-                {formatGTQ(summary.overdueAmount)}
-              </p>
-            </div>
-          </div>
+          </section>
 
           {/* Línea de tiempo de cuotas */}
-          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-            <ul className="divide-y divide-gray-100">
-              {cuotas.map((c) => {
-                const meta = ESTADO_META[c.estado];
-                return (
-                  <li
-                    key={c.id}
-                    className="flex items-center gap-3 px-4 py-3.5"
-                  >
-                    <span
-                      className={`h-2.5 w-2.5 shrink-0 rounded-full ${meta.dot}`}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-800">{c.concept}</p>
-                      <p className="text-xs text-gray-400">
-                        Vence: {fmtFecha(c.dueDate)}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <p className="font-semibold text-gray-800">
-                        {formatGTQ(c.amount)}
-                      </p>
-                      <span
-                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.badge}`}
-                      >
-                        {meta.label}
+          <ol className="relative space-y-3">
+            {/* Línea vertical */}
+            <span
+              aria-hidden
+              className="absolute bottom-6 left-[9px] top-6 w-px bg-gray-200 sm:left-[11px]"
+            />
+            {cuotas.map((c, i) => {
+              const meta = ESTADO_META[c.estado];
+              const pagable =
+                c.estado === "pendiente" ||
+                c.estado === "vencido" ||
+                c.estado === "parcial";
+              return (
+                <li key={c.id} className="relative flex gap-3 sm:gap-4">
+                  {/* Marcador */}
+                  <span className="relative z-10 mt-5 flex h-5 w-5 shrink-0 items-center justify-center sm:h-6 sm:w-6">
+                    {c.estado === "pagado" ? (
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white">
+                        <Check aria-hidden className="h-3 w-3" strokeWidth={3} />
                       </span>
-                      {c.saldo > 0 && c.paid > 0 && (
-                        <p className="text-xs text-gray-400">
-                          Saldo: {formatGTQ(c.saldo)}
-                        </p>
-                      )}
-                      {(c.estado === "pendiente" ||
-                        c.estado === "vencido" ||
-                        c.estado === "parcial") && (
+                    ) : c.estado === "en_revision" ? (
+                      <span className="h-4 w-4 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+                    ) : (
+                      <span
+                        className={`h-4 w-4 rounded-full border-2 bg-white ${
+                          c.estado === "vencido" ? "border-red-400" : "border-gray-300"
+                        }`}
+                      />
+                    )}
+                  </span>
+
+                  {/* Tarjeta */}
+                  <div
+                    className={`flex min-w-0 flex-1 flex-col gap-3 rounded-2xl border bg-white p-4 sm:flex-row sm:items-center sm:p-5 ${
+                      c.estado === "en_revision"
+                        ? "border-amber-200"
+                        : c.estado === "vencido"
+                          ? "border-red-200"
+                          : "border-gray-200"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500">
+                          {/^admisi/i.test(cuotas[0]?.concept ?? "") ? i : i + 1}
+                        </span>
+                        <span className="font-semibold text-gray-900">
+                          {c.concept}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.chip}`}
+                        >
+                          <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                          {meta.label}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="text-lg font-bold text-gray-900">
+                          {formatGTQ(c.amount)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                          <CalendarDays aria-hidden className="h-3.5 w-3.5" />
+                          Fecha límite: {fmtFechaLarga(c.dueDate)}
+                        </span>
+                        {c.saldo > 0 && c.paid > 0 && (
+                          <span className="text-xs text-gray-500">
+                            Saldo: {formatGTQ(c.saldo)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Acción */}
+                    <div className="shrink-0">
+                      {c.estado === "pagado" ? (
+                        <button
+                          onClick={() => void descargarComprobante(c)}
+                          disabled={descargando === c.id}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 disabled:opacity-60 sm:w-auto"
+                        >
+                          <Download aria-hidden className="h-4 w-4" />
+                          {descargando === c.id ? "Descargando…" : "Descargar Comprobante"}
+                        </button>
+                      ) : c.estado === "en_revision" ? (
+                        <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 sm:w-auto">
+                          <Clock aria-hidden className="h-4 w-4" />
+                          Esperando validación
+                        </span>
+                      ) : pagable ? (
                         <button
                           onClick={() => setBoletaFor(c)}
-                          className="mt-1 rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 sm:w-auto"
                         >
+                          <Upload aria-hidden className="h-4 w-4" />
                           Registrar Pago
                         </button>
-                      )}
+                      ) : null}
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
 
-          <p className="mt-4 text-xs text-gray-400">
-            Sube la boleta de tu transferencia bancaria en la cuota
-            correspondiente. Quedará <strong>en revisión</strong> hasta que la
-            escuela la apruebe.
+          <p className="text-xs text-gray-400">
+            Paga con tarjeta o sube la boleta de tu transferencia en la cuota
+            correspondiente. Las boletas quedan <strong>en revisión</strong>{" "}
+            hasta que la escuela las apruebe.
           </p>
         </>
       )}

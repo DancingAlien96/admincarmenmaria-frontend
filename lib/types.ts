@@ -29,6 +29,35 @@ export interface AuthUser {
 }
 
 // --- Portal del alumno ---
+// Datos del alumno para el marco del portal (menú y encabezado)
+export interface PortalMe {
+  student: {
+    id: string;
+    fullName: string;
+    expedienteNumber: string | null;
+    sede: string | null;
+    status: StudentStatus;
+    photoUrl: string | null;
+  };
+  fase: {
+    numero: number;
+    nombre: string;
+    subtitulo: string;
+    total: number;
+    completadas: number;
+  };
+  notifCount: number;
+}
+
+// Actividad reciente del alumno (dashboard)
+export interface PortalEvento {
+  id: string;
+  tipo: "pago" | "documento" | "estado";
+  estado: "ok" | "revision" | "info";
+  titulo: string;
+  fecha: string;
+}
+
 export interface PortalDashboard {
   student: {
     id: string;
@@ -223,6 +252,17 @@ export interface FaseItem {
   items: GradeItem[];
   promedio: number | null;
   estado: "completado" | "en-progreso" | "pendiente";
+  // Reto de Comprensión de la fase (solo en el portal del alumno)
+  reto?: { preguntas: number; aprobado: boolean };
+  // Nota ponderada por sección (Tareas 50, Parciales 30, Examen final 20)
+  desglose: {
+    clave: "tareas" | "parciales" | "final";
+    nombre: string;
+    peso: number;
+    evaluaciones: number;
+    promedio: number | null;
+    puntos: number | null;
+  }[];
 }
 
 export interface StudentFases {

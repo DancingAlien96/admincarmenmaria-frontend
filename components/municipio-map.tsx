@@ -88,13 +88,24 @@ export function MunicipioMap() {
 
       if (located.length > 0) {
         const bounds = L.latLngBounds(located.map((m) => [m.lat, m.lng]));
-        map.fitBounds(bounds.pad(0.3), { maxZoom: 10 });
+        // Sin animación: si el mapa se desmonta a media animación (cambio de
+        // año, navegación o el doble montaje de React en desarrollo), Leaflet
+        // falla con "_leaflet_pos" al terminar el zoom sobre un mapa borrado.
+        map.fitBounds(bounds.pad(0.3), { maxZoom: 10, animate: false });
       }
     });
 
     return () => {
       cancelled = true;
-      if (map) map.remove();
+      if (map) {
+        map.stop(); // detiene cualquier paneo en curso
+        // Leaflet 1.9 deja un setTimeout de 250 ms al animar el zoom que
+        // remove() no cancela; si sigue "animando", ese timer usa el mapa ya
+        // borrado. Marcarlo como terminado hace que el timer no haga nada.
+        (map as unknown as { _animatingZoom: boolean })._animatingZoom = false;
+        map.off();
+        map.remove();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, loading]);

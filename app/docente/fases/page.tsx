@@ -2,8 +2,13 @@
 
 import { FasesManager } from "@/components/fases-manager";
 
+// El docente consulta el contenido de cada fase (lo crea la administración) y
+// registra las calificaciones en la sección Calificaciones.
 export default function DocenteFasesPage() {
   return (
-    <FasesManager intro="Publica tareas, actividades, exámenes y materiales para cada fase. Tus estudiantes los verán en su portal." />
+    <FasesManager
+      readOnly
+      intro="Contenido de cada fase publicado por la administración: tareas, actividades, exámenes, materiales y el Reto de Comprensión. Las calificaciones las registras en la sección Calificaciones."
+    />
   );
 }

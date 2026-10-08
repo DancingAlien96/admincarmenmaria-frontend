@@ -16,7 +16,7 @@ export default function PanelFasesPage() {
   }
   return (
     <div className="max-w-4xl">
-      <FasesManager intro="Crea el contenido de cada fase para los estudiantes: tareas, actividades, exámenes y materiales descargables. Lo ven en su portal, sección Fases (también lo pueden publicar los docentes)." />
+      <FasesManager intro="Crea el contenido de cada fase para los estudiantes: tareas, actividades, exámenes y materiales descargables. Lo ven en su portal, sección Fases. Los catedráticos lo consultan y registran las calificaciones." />
     </div>
   );
 }

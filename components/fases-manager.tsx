@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, FileText, FlaskConical, Library, type LucideIcon } from "lucide-react";
+import { Brain, Check, ClipboardList, FileText, FlaskConical, Heart, Library, Star, X, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
@@ -24,9 +24,16 @@ function sizeLabel(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-// Gestión del contenido de clase por fase (tareas, actividades, exámenes y
-// materiales). La usan el docente y el administrador.
-export function FasesManager({ intro }: { intro: string }) {
+// Contenido de clase por fase (tareas, actividades, exámenes, materiales y
+// Reto de Comprensión). Lo crea el administrador; el docente lo consulta
+// (readOnly) y solo pone las calificaciones.
+export function FasesManager({
+  intro,
+  readOnly = false,
+}: {
+  intro: string;
+  readOnly?: boolean;
+}) {
   const [fase, setFase] = useState(1);
   const [items, setItems] = useState<FaseContentItem[] | null>(null);
 
@@ -95,8 +102,11 @@ export function FasesManager({ intro }: { intro: string }) {
               items={delFase.filter((i) => i.kind === sec.kind)}
               onChange={load}
               onDelete={delItem}
+              readOnly={readOnly}
             />
           ))}
+          <RetoManager key={`reto-${fase}`} fase={fase} readOnly={readOnly} />
+          <EncuestaResultados key={`enc-${fase}`} fase={fase} />
         </div>
       )}
     </div>
@@ -111,6 +121,7 @@ function SeccionCard({
   items,
   onChange,
   onDelete,
+  readOnly,
 }: {
   fase: number;
   kind: FaseItemKind;
@@ -119,8 +130,11 @@ function SeccionCard({
   items: FaseContentItem[];
   onChange: () => void;
   onDelete: (id: string) => void;
+  readOnly: boolean;
 }) {
   const [adding, setAdding] = useState(false);
+  // Si no es null, el formulario edita ese elemento en vez de crear uno nuevo
+  const [editId, setEditId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
@@ -130,9 +144,32 @@ function SeccionCard({
   const fileRef = useRef<HTMLInputElement>(null);
   const esMaterial = kind === "MATERIAL";
 
+  function limpiar() {
+    setTitle("");
+    setDescription("");
+    setDate("");
+    setMeta("");
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = "";
+    setEditId(null);
+    setAdding(false);
+  }
+
+  function editar(it: FaseContentItem) {
+    setEditId(it.id);
+    setTitle(it.title);
+    setDescription(it.description ?? "");
+    setDate(it.date ? it.date.slice(0, 10) : "");
+    setMeta(it.meta ?? "");
+    setFile(null);
+    if (fileRef.current) fileRef.current.value = "";
+    setAdding(true);
+  }
+
   async function agregar(e: React.FormEvent) {
     e.preventDefault();
-    if (esMaterial && !file) {
+    // Al editar un material, el archivo nuevo es opcional (se conserva el actual)
+    if (esMaterial && !file && !editId) {
       alert("Sube el archivo del material.");
       return;
     }
@@ -147,30 +184,27 @@ function SeccionCard({
         fileKey = up.key;
         size = sizeLabel(up.size);
       }
-      await api("/api/fase-content", {
-        method: "POST",
-        body: {
-          fase,
-          kind,
-          title,
-          description,
-          date: date || null,
-          meta: meta || null,
-          fileUrl,
-          fileKey,
-          sizeLabel: size,
-        },
-      });
-      setTitle("");
-      setDescription("");
-      setDate("");
-      setMeta("");
-      setFile(null);
-      if (fileRef.current) fileRef.current.value = "";
-      setAdding(false);
+      const body = {
+        title,
+        description,
+        date: date || null,
+        meta: meta || null,
+        fileUrl,
+        fileKey,
+        sizeLabel: size,
+      };
+      if (editId) {
+        await api(`/api/fase-content/${editId}`, { method: "PATCH", body });
+      } else {
+        await api("/api/fase-content", {
+          method: "POST",
+          body: { fase, kind, ...body },
+        });
+      }
+      limpiar();
       onChange();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo agregar");
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }
@@ -183,12 +217,14 @@ function SeccionCard({
           <Icon aria-hidden className="h-5 w-5" />
           {titulo}
         </h2>
-        <button
-          onClick={() => setAdding((v) => !v)}
-          className="text-sm font-medium text-brand-600 hover:underline"
-        >
-          {adding ? "Cerrar" : "+ Agregar"}
-        </button>
+        {!readOnly && (
+          <button
+            onClick={() => (adding ? limpiar() : setAdding(true))}
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            {adding ? "Cerrar" : "+ Agregar"}
+          </button>
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -222,12 +258,22 @@ function SeccionCard({
                   Ver
                 </a>
               )}
-              <button
-                onClick={() => onDelete(it.id)}
-                className="text-xs text-red-600 hover:underline"
-              >
-                Eliminar
-              </button>
+              {!readOnly && (
+                <>
+                  <button
+                    onClick={() => editar(it)}
+                    className="text-xs text-brand-600 hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => onDelete(it.id)}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    Eliminar
+                  </button>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -235,6 +281,9 @@ function SeccionCard({
 
       {adding && (
         <form onSubmit={agregar} className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+          {editId && (
+            <p className="text-xs font-medium text-brand-700">Editando elemento</p>
+          )}
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -284,9 +333,266 @@ function SeccionCard({
             disabled={busy}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
-            {busy ? "Guardando…" : "Guardar"}
+            {busy ? "Guardando…" : editId ? "Guardar cambios" : "Guardar"}
+          </button>
+          {editId && (
+            <button
+              type="button"
+              onClick={limpiar}
+              className="ml-3 text-sm text-gray-500 hover:underline"
+            >
+              Cancelar
+            </button>
+          )}
+          {editId && esMaterial && (
+            <p className="text-xs text-gray-500">
+              Si no eliges un archivo nuevo, se conserva el actual.
+            </p>
+          )}
+        </form>
+      )}
+    </section>
+  );
+}
+
+// --- Reto de Comprensión (preguntas) -----------------------------------------
+
+interface Pregunta {
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+}
+
+function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
+  const [preguntas, setPreguntas] = useState<Pregunta[] | null>(null);
+  const [resultados, setResultados] = useState<
+    { id: string; nombre: string; intentos: number; mejor: number; aprobado: boolean }[]
+  >([]);
+  const [adding, setAdding] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [options, setOptions] = useState(["", "", "", ""]);
+  const [correct, setCorrect] = useState(0);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const [q, r] = await Promise.all([
+      api<{ preguntas: Pregunta[] }>(`/api/fase-extras/quiz?fase=${fase}`),
+      api<{ alumnos: typeof resultados }>(`/api/fase-extras/quiz/resultados?fase=${fase}`),
+    ]);
+    setPreguntas(q.preguntas);
+    setResultados(r.alumnos);
+  }, [fase]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await api("/api/fase-extras/quiz", {
+        method: "POST",
+        body: { fase, question, options, correctIndex: correct },
+      });
+      setQuestion("");
+      setOptions(["", "", "", ""]);
+      setCorrect(0);
+      setAdding(false);
+      await load();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar la pregunta");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function borrar(id: string) {
+    if (!confirm("¿Eliminar esta pregunta del reto?")) return;
+    await api(`/api/fase-extras/quiz/${id}`, { method: "DELETE" });
+    await load();
+  }
+
+  const aprobados = resultados.filter((r) => r.aprobado).length;
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-semibold text-brand-800">
+          <Brain aria-hidden className="h-5 w-5" />
+          Reto de Comprensión
+        </h2>
+        {!readOnly && (
+          <button
+            onClick={() => setAdding((v) => !v)}
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            {adding ? "Cerrar" : "+ Agregar pregunta"}
+          </button>
+        )}
+      </div>
+      <p className="mb-4 text-sm text-gray-500">
+        Preguntas de opción múltiple. El estudiante aprueba con 80 % (intentos
+        ilimitados). No afecta la nota, pero es requisito para desbloquear la
+        siguiente fase. Si no hay preguntas, la fase no exige reto.
+      </p>
+
+      {adding && (
+        <form onSubmit={guardar} className="mb-4 space-y-2 rounded-lg bg-gray-50 p-3">
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Pregunta"
+            rows={2}
+            required
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          {options.map((o, k) => (
+            <label key={k} className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="correcta"
+                checked={correct === k}
+                onChange={() => setCorrect(k)}
+                title="Respuesta correcta"
+              />
+              <input
+                value={o}
+                onChange={(e) =>
+                  setOptions(options.map((x, i) => (i === k ? e.target.value : x)))
+                }
+                placeholder={`Opción ${k + 1}${k > 1 ? " (opcional)" : ""}`}
+                required={k < 2}
+                className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+              />
+            </label>
+          ))}
+          <p className="text-xs text-gray-500">Marca el círculo de la respuesta correcta.</p>
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          >
+            {busy ? "Guardando…" : "Guardar pregunta"}
           </button>
         </form>
+      )}
+
+      {!preguntas ? (
+        <p className="text-sm text-gray-400">Cargando…</p>
+      ) : preguntas.length === 0 ? (
+        <p className="text-sm text-gray-400">Esta fase aún no tiene reto.</p>
+      ) : (
+        <ol className="space-y-2">
+          {preguntas.map((p, i) => (
+            <li key={p.id} className="rounded-lg border border-gray-100 px-3 py-2 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium text-gray-800">
+                  {i + 1}. {p.question}
+                </p>
+                {!readOnly && (
+                  <button
+                    onClick={() => void borrar(p.id)}
+                    className="text-red-600 hover:text-red-700"
+                    aria-label="Eliminar pregunta"
+                  >
+                    <X aria-hidden className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <ul className="mt-1 space-y-0.5 text-xs">
+                {p.options.map((o, k) => (
+                  <li
+                    key={k}
+                    className={k === p.correctIndex ? "font-medium text-green-700" : "text-gray-500"}
+                  >
+                    {k === p.correctIndex && (
+                      <Check aria-hidden className="mr-1 inline h-3 w-3" strokeWidth={3} />
+                    )}
+                    {o}
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {resultados.length > 0 && (
+        <div className="mt-4 border-t border-gray-100 pt-3">
+          <p className="mb-2 text-sm font-medium text-gray-700">
+            Resultados: {aprobados} de {resultados.length} estudiante(s) aprobaron
+          </p>
+          <ul className="max-h-48 space-y-1 overflow-y-auto text-xs">
+            {resultados.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-2">
+                <span className="truncate text-gray-700">{r.nombre}</span>
+                <span className={r.aprobado ? "text-green-700" : "text-gray-500"}>
+                  {Math.round(r.mejor)}% · {r.intentos} intento(s)
+                  {r.aprobado ? " · Aprobado" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// --- Resultados de la Encuesta de satisfacción ------------------------------
+
+interface EncuestaResumen {
+  respuestas: number;
+  secciones: {
+    clave: string;
+    nombre: string;
+    promedio: number | null;
+    criterios: { clave: string; nombre: string; promedio: number | null; votos: number }[];
+  }[];
+}
+
+function EncuestaResultados({ fase }: { fase: number }) {
+  const [data, setData] = useState<EncuestaResumen | null>(null);
+
+  useEffect(() => {
+    api<EncuestaResumen>(`/api/fase-extras/encuesta/resumen?fase=${fase}`)
+      .then(setData)
+      .catch(() => undefined);
+  }, [fase]);
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <h2 className="mb-1 flex items-center gap-2 font-semibold text-brand-800">
+        <Heart aria-hidden className="h-5 w-5" />
+        Encuesta de satisfacción
+      </h2>
+      <p className="mb-4 text-sm text-gray-500">
+        {data ? `${data.respuestas} estudiante(s) han respondido en esta fase.` : "Cargando…"}
+      </p>
+      {data && data.respuestas > 0 && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {data.secciones.map((s) => (
+            <div key={s.clave} className="rounded-lg bg-gray-50 p-3">
+              <p className="flex items-center justify-between text-sm font-semibold text-gray-800">
+                {s.nombre}
+                <span className="inline-flex items-center gap-1 text-amber-600">
+                  <Star aria-hidden className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  {s.promedio ?? "—"}
+                </span>
+              </p>
+              <ul className="mt-2 space-y-1 text-xs">
+                {s.criterios.map((c) => (
+                  <li key={c.clave} className="flex justify-between gap-2 text-gray-600">
+                    <span className="truncate">{c.nombre}</span>
+                    <span className="shrink-0">{c.promedio ?? "—"}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
     </section>
   );

@@ -7,6 +7,7 @@ import {
   GRADE_CATEGORY_LABELS,
   type GradeCategory,
   type StudentFases,
+  type FaseContentItem,
 } from "@/lib/types";
 
 interface DocenteStudent {
@@ -119,6 +120,22 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
   const [maxScore, setMaxScore] = useState("100");
   const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false);
+  // Actividades que la administración creó en cada fase (para sugerir nombres)
+  const [actividades, setActividades] = useState<FaseContentItem[]>([]);
+
+  useEffect(() => {
+    api<{ items: FaseContentItem[] }>("/api/fase-content")
+      .then((r) => setActividades(r.items))
+      .catch(() => setActividades([]));
+  }, []);
+
+  const sugerencias = actividades.filter(
+    (a) =>
+      a.fase === Number(fase) &&
+      (category === "TAREA"
+        ? a.kind === "TAREA" || a.kind === "ACTIVIDAD"
+        : a.kind === "EXAMEN")
+  );
 
   const reload = useCallback(async () => {
     setData(
@@ -257,11 +274,26 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
         </div>
         <input
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (ej. Ensayo, Primer parcial…)"
+          onChange={(e) => {
+            setName(e.target.value);
+            // Si elige una actividad publicada, se usa su fecha
+            const act = sugerencias.find((a) => a.title === e.target.value);
+            if (act?.date && !date) setDate(act.date.slice(0, 10));
+          }}
+          list="actividades-fase"
+          placeholder={
+            sugerencias.length > 0
+              ? "Elige la actividad o escribe el nombre"
+              : "Nombre (ej. Ensayo, Primer parcial…)"
+          }
           required
           className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
         />
+        <datalist id="actividades-fase">
+          {sugerencias.map((a) => (
+            <option key={a.id} value={a.title} />
+          ))}
+        </datalist>
         <div className="grid grid-cols-3 gap-2">
           <input
             type="number"
