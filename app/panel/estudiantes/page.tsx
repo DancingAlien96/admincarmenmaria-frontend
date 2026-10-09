@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Check, Copy, MessageCircle } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -125,7 +126,7 @@ export default function StudentsPage() {
         method: "POST",
         body: {},
       });
-      setInviteLink(`${window.location.origin}/inscripcion/?token=${r.token}`);
+      setInviteLink(`${window.location.origin}/inscripcion/?t=${r.token}`);
     } catch (err) {
       alert(
         err instanceof ApiError ? err.message : "No se pudo generar el link."
@@ -196,12 +197,7 @@ export default function StudentsPage() {
                 <code className="flex-1 break-all rounded bg-white px-2 py-1 text-xs text-gray-700">
                   {inviteLink}
                 </code>
-                <button
-                  onClick={() => void navigator.clipboard.writeText(inviteLink)}
-                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
-                >
-                  Copiar
-                </button>
+                <CopyButton text={inviteLink} />
                 <button
                   onClick={() => setInviteLink(null)}
                   className="text-xs text-gray-500 hover:underline"
@@ -209,6 +205,7 @@ export default function StudentsPage() {
                   Cerrar
                 </button>
               </div>
+              <WhatsAppShare link={inviteLink} />
             </div>
             <InviteQR link={inviteLink} />
           </div>
@@ -399,6 +396,69 @@ export default function StudentsPage() {
 }
 
 // QR del link de inscripción (para imprimir/compartir).
+function CopyButton({ text }: { text: string }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <button
+      onClick={() =>
+        void navigator.clipboard.writeText(text).then(() => {
+          setOk(true);
+          setTimeout(() => setOk(false), 1500);
+        })
+      }
+      className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+    >
+      {ok ? <Check aria-hidden className="h-3.5 w-3.5" /> : <Copy aria-hidden className="h-3.5 w-3.5" />}
+      {ok ? "Copiado" : "Copiar"}
+    </button>
+  );
+}
+
+// Número de WhatsApp: 8 dígitos = Guatemala (se antepone 502).
+function waNumber(raw: string): string {
+  const d = raw.replace(/\D/g, "");
+  return d.length === 8 ? `502${d}` : d;
+}
+
+// Comparte el link por WhatsApp: al número escrito o eligiendo el contacto.
+function WhatsAppShare({ link }: { link: string }) {
+  const [phone, setPhone] = useState("");
+  const num = waNumber(phone);
+  const invalido = phone.trim() !== "" && num.length < 8;
+  const texto =
+    "¡Hola! Te compartimos el formulario de inscripción de la Escuela de " +
+    `Enfermería Carmen María. Llénalo aquí:
+${link}`;
+  const href = `https://wa.me/${num}?text=${encodeURIComponent(texto)}`;
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <input
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        inputMode="tel"
+        placeholder="WhatsApp del aspirante (opcional)"
+        className="w-56 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs"
+      />
+      <a
+        href={invalido ? undefined : href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-disabled={invalido}
+        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white ${
+          invalido ? "pointer-events-none bg-gray-300" : "bg-[#25D366] hover:bg-[#1ebe5b]"
+        }`}
+      >
+        <MessageCircle aria-hidden className="h-3.5 w-3.5" />
+        Enviar por WhatsApp
+      </a>
+      <span className="text-[11px] text-gray-500">
+        {phone.trim() ? (invalido ? "Número incompleto" : `Se abrirá el chat con +${num}`) : "Sin número, eliges el contacto en WhatsApp"}
+      </span>
+    </div>
+  );
+}
+
 function InviteQR({ link }: { link: string }) {
   const wrapRef = useRef<HTMLDivElement>(null);
 

@@ -32,7 +32,9 @@ const CURRENT_YEAR = new Date().getFullYear();
 const START_YEARS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - 1 + i);
 
 function InscripcionInner() {
-  const token = useSearchParams().get("token") ?? "";
+  // Link corto: ?t=CODIGO (los links anteriores usan ?token=)
+  const params = useSearchParams();
+  const token = params.get("t") ?? params.get("token") ?? "";
   const router = useRouter();
   const { login } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
