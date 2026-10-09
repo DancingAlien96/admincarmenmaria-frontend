@@ -123,7 +123,7 @@ function InscripcionInner() {
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
-        throw new Error(j.message ?? "No se pudo subir la foto");
+        throw new Error(j.error ?? j.message ?? "No se pudo subir la foto");
       }
       const stored = (await r.json()) as { url: string; key: string };
       setPhoto({ url: stored.url, key: stored.key });
@@ -207,7 +207,7 @@ function InscripcionInner() {
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
-        throw new Error(j.message ?? "No se pudo completar el registro");
+        throw new Error(j.error ?? j.message ?? "No se pudo completar el registro");
       }
       await login(form.email, loginPassword);
       // Inscripción nueva: paso 2 = pagar el examen de admisión

@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth-context";
 import { STATUS_LABELS } from "@/lib/labels";
 import { AppShell, type ShellNavItem } from "@/components/app-shell";
 import { PortalMeContext } from "@/components/portal-context";
+import { PushBanner } from "@/components/push-toggle";
 import type { PortalMe } from "@/lib/types";
 
 export default function PortalLayout({
@@ -70,6 +71,7 @@ export default function PortalLayout({
         { href: "/portal/ebooks", label: "Material de estudio", icon: BookOpen },
         { href: "/portal/pagos", label: "Pagos", icon: CircleDollarSign },
         { href: "/portal/documentos", label: "Documentación", icon: Folder },
+        { href: "/portal/notificaciones", label: "Notificaciones", icon: Bell, badge: notifCount },
       ]
     : [
         { href: "/portal", label: "Dashboard", icon: LayoutDashboard },
@@ -105,7 +107,7 @@ export default function PortalLayout({
         }}
         title={title}
         headerActions={
-          !esAspirante && (
+          (
             <Link
               href="/portal/notificaciones"
               aria-label="Notificaciones"
@@ -123,6 +125,7 @@ export default function PortalLayout({
         helpText="Comunícate con la administración de la escuela para dudas sobre pagos, documentos o tus fases."
         onLogout={() => void logout()}
       >
+        {path === "/portal" && <PushBanner href="/portal/notificaciones/#activar" />}
         {children}
       </AppShell>
     </PortalMeContext.Provider>

@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { api } from "./api";
+import { olvidarDispositivo } from "./push";
 import type { AuthUser } from "./types";
 
 interface AuthContextValue {
@@ -49,6 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      // Antes de cerrar la sesión: este dispositivo deja de recibir sus avisos
+      await olvidarDispositivo();
       await api("/api/auth/logout", { method: "POST" });
     } finally {
       setUser(null);

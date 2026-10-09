@@ -1,15 +1,17 @@
 "use client";
 
-import { ClipboardCheck, LayoutDashboard, Layers, Undo2 } from "lucide-react";
+import { Bell, ClipboardCheck, LayoutDashboard, Layers, Undo2 } from "lucide-react";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { AppShell, type ShellNavItem } from "@/components/app-shell";
+import { PushBanner } from "@/components/push-toggle";
 
 const NAV: ShellNavItem[] = [
   { href: "/docente", label: "Inicio", icon: LayoutDashboard },
   { href: "/docente/fases", label: "Fases", icon: Layers },
   { href: "/docente/calificaciones", label: "Calificaciones", icon: ClipboardCheck },
+  { href: "/docente/avisos", label: "Avisos", icon: Bell },
 ];
 
 export default function DocenteLayout({
@@ -19,6 +21,7 @@ export default function DocenteLayout({
 }) {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Docentes (y admin para revisar) usan este portal.
   const allowed = user?.role === "DOCENTE" || user?.role === "ADMIN";
@@ -54,6 +57,7 @@ export default function DocenteLayout({
       helpText="Para dudas sobre tus grupos, el contenido de las fases o el acceso al sistema, comunícate con la administración."
       onLogout={() => void logout()}
     >
+      {user.role === "DOCENTE" && pathname.replace(/\/$/, "") === "/docente" && <PushBanner href="/docente/avisos/#activar" />}
       {children}
     </AppShell>
   );

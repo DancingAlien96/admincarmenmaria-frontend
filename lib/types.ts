@@ -813,3 +813,35 @@ export interface TeacherDetail {
   documents: TeacherDocument[];
 }
 
+
+// Avisos (portal del alumno / docente)
+export interface MiAviso {
+  id: string;
+  tipo: "general" | "pago" | "matricula" | "documento" | "calificacion";
+  titulo: string;
+  mensaje: string;
+  url: string | null;
+  fecha: string;
+  leido: boolean;
+}
+
+export interface MisAvisos {
+  noLeidos: number;
+  items: MiAviso[];
+}
+
+// Avisos enviados desde el panel
+export interface AvisoEnviado {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  url: string | null;
+  destino: string | null;
+  canales: string[];
+  destinatarios: number;
+  leidos: number;
+  pushEnviados: number;
+  correosEnviados: number;
+  creadoPor: string | null;
+  createdAt: string;
+}

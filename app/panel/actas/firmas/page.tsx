@@ -60,7 +60,7 @@ export default function FirmasPage() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j.message ?? "No se pudo guardar la firma");
+        throw new Error(j.error ?? j.message ?? "No se pudo guardar la firma");
       }
       setName("");
       setRole("");

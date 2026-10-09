@@ -3,6 +3,9 @@
 import { CircleCheck, FileText, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { AvisosList } from "@/components/avisos-list";
+import { PushToggle } from "@/components/push-toggle";
+import { usePortalMe } from "@/components/portal-context";
 import type { PortalNotif, PortalNotifs } from "@/lib/types";
 
 const PRIO: Record<
@@ -46,6 +49,7 @@ function icono(tipo: PortalNotif["tipo"]) {
 export default function PortalNotificacionesPage() {
   const [data, setData] = useState<PortalNotifs | null>(null);
   const [loading, setLoading] = useState(true);
+  const { reload } = usePortalMe();
 
   useEffect(() => {
     api<PortalNotifs>("/api/portal/notificaciones")
@@ -63,9 +67,21 @@ export default function PortalNotificacionesPage() {
         Notificaciones
       </h1>
       <p className="mb-6 text-sm text-gray-500">
-        Avisos sobre tus cuotas y documentos.
+        Avisos de la escuela y pendientes de tus cuotas y documentos.
       </p>
 
+      <div id="activar" className="mb-6 scroll-mt-20">
+        <PushToggle />
+      </div>
+
+      <div className="mb-8">
+        <AvisosList
+          emptyText="Aún no tienes avisos de la escuela."
+          onChange={() => void reload()}
+        />
+      </div>
+
+      <h2 className="mb-2 font-semibold text-brand-800">Pendientes</h2>
       {data.items.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center">
           <CircleCheck aria-hidden className="mx-auto h-9 w-9 text-green-500" />
@@ -108,7 +124,7 @@ export default function PortalNotificacionesPage() {
       )}
 
       <p className="mt-4 text-xs text-gray-400">
-        Estos avisos se actualizan solos según tus cuotas y documentos. Si ya
+        Los pendientes se actualizan solos según tus cuotas y documentos. Si ya
         realizaste un pago o entregaste un documento, se quitará cuando la
         escuela lo registre.
       </p>

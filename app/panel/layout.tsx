@@ -13,6 +13,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   Layers,
+  Megaphone,
   UserCog,
   Users,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const MODULOS: (ShellNavItem & { section?: ModuleSection })[] = [
   { href: "/panel/estudiantes", label: "Expedientes", icon: Users, section: "STUDENTS" },
   { href: "/panel/pagos", label: "Control de Pagos", icon: CircleDollarSign, section: "PAYMENTS" },
   { href: "/panel/recordatorios", label: "Recordatorios", icon: BellRing, section: "REMINDERS" },
+  { href: "/panel/avisos", label: "Avisos y notificaciones", icon: Megaphone, section: "REMINDERS" },
   { href: "/panel/dashboard", label: "Dashboard Financiero", icon: ChartColumn, section: "DASHBOARD" },
   { href: "/panel/reportes", label: "Reportes", icon: FileChartColumn, section: "DASHBOARD" },
   { href: "/panel/diplomas", label: "Banca de Diplomas", icon: GraduationCap, section: "DIPLOMAS" },
