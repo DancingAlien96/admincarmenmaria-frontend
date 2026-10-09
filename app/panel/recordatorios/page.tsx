@@ -677,22 +677,49 @@ function BulkEmailCard() {
   );
 }
 
+function fmtEjecucion(iso: string) {
+  return new Intl.DateTimeFormat("es-GT", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Guatemala",
+  }).format(new Date(iso));
+}
+
 function EmailRemindersCard() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [ultima, setUltima] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<{ ultimaEjecucion: string | null }>("/api/whatsapp/reminders-status")
+      .then((r) => setUltima(r.ultimaEjecucion))
+      .catch(() => undefined);
+  }, []);
 
   async function correr() {
     setBusy(true);
     setMsg(null);
     try {
-      const r = await api<{ checked: number; sent: number; skipped: number }>(
-        "/api/whatsapp/run-email-reminders",
-        { method: "POST" }
+      const r = await api<{
+        ejecutado: boolean;
+        ultimaEjecucion: string | null;
+        correo?: { checked: number; sent: number };
+        push?: { checked: number; sent: number };
+      }>("/api/whatsapp/run-email-reminders", { method: "POST" });
+      setUltima(r.ultimaEjecucion);
+      setMsg(
+        r.ejecutado
+          ? {
+              ok: true,
+              text: `Listo: ${r.correo?.sent ?? 0} correo(s) y ${r.push?.sent ?? 0} notificación(es) enviadas (${r.correo?.checked ?? 0} cuotas revisadas).`,
+            }
+          : {
+              ok: true,
+              text: "Los recordatorios de hoy ya se enviaron; no se repiten para no duplicar mensajes.",
+            }
       );
-      setMsg({
-        ok: true,
-        text: `Listo: ${r.sent} recordatorio(s) enviados (${r.checked} cuotas revisadas).`,
-      });
     } catch (err) {
       setMsg({
         ok: false,
@@ -706,20 +733,24 @@ function EmailRemindersCard() {
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
       <h2 className="mb-1 font-semibold text-brand-800">
-        Recordatorios de cuotas por correo
+        Recordatorios de cuotas (correo y notificación)
       </h2>
-      <p className="mb-4 text-sm text-gray-500">
-        El sistema envía solo, cada día, un correo a los estudiantes con cuota{" "}
-        <strong>por vencer</strong> (5 días antes y el día) o{" "}
-        <strong>en mora</strong> (3 y 7 días después). Aquí puedes ejecutarlo
-        manualmente ahora.
+      <p className="mb-2 text-sm text-gray-500">
+        Todos los días a las <strong>8:00 a. m.</strong> (hora de Guatemala) el
+        sistema avisa por correo y por notificación al celular a los
+        estudiantes con cuota <strong>por vencer</strong> (5 días antes y el
+        día) o <strong>en mora</strong> (3 y 7 días después). Se envía una sola
+        vez por día.
+      </p>
+      <p className="mb-4 text-xs text-gray-400">
+        Último envío: {ultima ? fmtEjecucion(ultima) : "todavía no se ha enviado"}
       </p>
       <button
         onClick={() => void correr()}
         disabled={busy}
         className="rounded-lg border border-brand-300 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-60"
       >
-        {busy ? "Enviando…" : "Enviar recordatorios ahora"}
+        {busy ? "Enviando…" : "Enviar los de hoy ahora"}
       </button>
       {msg && (
         <p
