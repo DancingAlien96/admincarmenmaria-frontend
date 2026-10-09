@@ -63,6 +63,8 @@ export default function PortalPagosPage() {
   const [descargando, setDescargando] = useState<string | null>(null);
   // Viene de la ficha de inscripción (paso 2: pagar el examen)
   const [desdeFicha, setDesdeFicha] = useState(false);
+  // Volvió de la pasarela sin pagar (canceló)
+  const [cancelado, setCancelado] = useState(false);
 
   async function reload() {
     const r = await api<PortalCuotas>("/api/portal/cuotas");
@@ -71,8 +73,12 @@ export default function PortalPagosPage() {
   }
 
   useEffect(() => {
-    const examen =
-      new URLSearchParams(window.location.search).get("examen") === "1";
+    const qs = new URLSearchParams(window.location.search);
+    const examen = qs.get("examen") === "1";
+    if (qs.get("cancelado") === "1") {
+      setCancelado(true);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
     reload()
       .then((r) => {
         if (!examen) return;
@@ -128,6 +134,13 @@ export default function PortalPagosPage() {
 
   return (
     <div className="space-y-5">
+      {cancelado && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Cancelaste el pago con tarjeta. No se te cobró nada; puedes
+          intentarlo de nuevo cuando quieras.
+        </div>
+      )}
+
       {desdeFicha && (
         <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           <p className="font-semibold">¡Tu ficha fue recibida!</p>

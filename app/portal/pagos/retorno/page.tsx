@@ -16,6 +16,30 @@ function RetornoInner() {
   useEffect(() => {
     if (ran.current) return; // evita doble ejecución
     ran.current = true;
+
+    // Recurrente: se consulta el estado real del pago. Si aún se procesa, se
+    // reintenta unos segundos (el webhook lo confirma en paralelo).
+    if (sp.get("proveedor") === "recurrente") {
+      const ref = sp.get("ref") ?? "";
+      let intentos = 0;
+      const consultar = () =>
+        api<{ status: Estado }>("/api/portal/pagos/confirmar-recurrente", {
+          method: "POST",
+          body: { ref },
+        })
+          .then((r) => {
+            if (r.status === "revision" && intentos < 5) {
+              intentos++;
+              setTimeout(consultar, 2500);
+              return;
+            }
+            setEstado(r.status);
+          })
+          .catch(() => setEstado("error"));
+      void consultar();
+      return;
+    }
+
     const body = {
       order: sp.get("order") ?? "",
       tpt: sp.get("tpt") ?? "",
@@ -35,7 +59,7 @@ function RetornoInner() {
     cargando: { icon: Loader, title: "Confirmando tu pago…", text: "Un momento, por favor.", color: "text-gray-600" },
     aprobado: { icon: CircleCheck, title: "¡Pago aprobado!", text: "Tu cuota quedó pagada. Te enviamos la confirmación por correo.", color: "text-green-700" },
     rechazado: { icon: CircleX, title: "Pago no completado", text: "El pago fue rechazado o cancelado. Puedes intentarlo de nuevo.", color: "text-red-700" },
-    revision: { icon: Clock, title: "Pago en revisión", text: "Recibimos tu pago pero necesita confirmación de la escuela. Te avisaremos.", color: "text-amber-700" },
+    revision: { icon: Clock, title: "Pago en proceso", text: "Tu pago se está confirmando. En unos minutos verás la cuota como pagada en tus pagos; si no, la escuela lo revisará.", color: "text-amber-700" },
     no_encontrado: { icon: CircleHelp, title: "No encontramos el pago", text: "Si te cobraron, comunícate con la escuela.", color: "text-gray-700" },
     error: { icon: TriangleAlert, title: "Ocurrió un problema", text: "No pudimos confirmar el pago. Si te cobraron, comunícate con la escuela.", color: "text-red-700" },
   };
