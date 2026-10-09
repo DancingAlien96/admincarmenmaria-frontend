@@ -94,7 +94,9 @@ export function AvisosList({
         <ul className="space-y-2">
           {data.items.map((a) => {
             const Icon = ICONOS[a.tipo] ?? Megaphone;
-            const externo = a.url?.startsWith("http");
+            // Solo rutas internas o https (el servidor ya lo valida; doble control)
+            const url = a.url && (/^\/(?!\/)/.test(a.url) || /^https:\/\//i.test(a.url)) ? a.url : null;
+            const externo = url?.startsWith("https://");
             return (
               <li
                 key={a.id}
@@ -110,10 +112,10 @@ export function AvisosList({
                   <p className="whitespace-pre-line text-sm text-gray-600">{a.mensaje}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-3 text-xs">
                     <span className="text-gray-400">{fmtFecha(a.fecha)}</span>
-                    {a.url &&
+                    {url &&
                       (externo ? (
                         <a
-                          href={a.url}
+                          href={url}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => !a.leido && void leer(a.id)}
@@ -123,7 +125,7 @@ export function AvisosList({
                         </a>
                       ) : (
                         <Link
-                          href={a.url}
+                          href={url}
                           onClick={() => !a.leido && void leer(a.id)}
                           className="font-medium text-brand-600 hover:underline"
                         >
