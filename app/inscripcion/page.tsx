@@ -378,7 +378,10 @@ function InscripcionInner() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Segundo nombre</label>
+                  <label className={labelClass}>
+                    Segundo nombre{" "}
+                    <span className="font-normal text-gray-400">(opcional)</span>
+                  </label>
                   <input
                     value={form.segundoNombre}
                     onChange={(e) => set("segundoNombre", e.target.value)}
@@ -386,7 +389,10 @@ function InscripcionInner() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Tercer nombre</label>
+                  <label className={labelClass}>
+                    Tercer nombre{" "}
+                    <span className="font-normal text-gray-400">(opcional)</span>
+                  </label>
                   <input
                     value={form.tercerNombre}
                     onChange={(e) => set("tercerNombre", e.target.value)}
@@ -404,7 +410,10 @@ function InscripcionInner() {
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Segundo apellido</label>
+                  <label className={labelClass}>
+                    Segundo apellido{" "}
+                    <span className="font-normal text-gray-400">(opcional)</span>
+                  </label>
                   <input
                     value={form.segundoApellido}
                     onChange={(e) => set("segundoApellido", e.target.value)}
