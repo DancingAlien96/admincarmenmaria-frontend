@@ -149,6 +149,13 @@ function InscripcionInner() {
         setError("Escribe al menos tu primer nombre y primer apellido.");
         return;
       }
+      const responsable = guardians.find(
+        (g) => g.name.trim() && g.relationship.trim() && g.phone.trim()
+      );
+      if (!responsable) {
+        setError("Agrega una persona responsable con nombre, parentesco y teléfono.");
+        return;
+      }
       if (!photo) {
         setError("Sube una fotografía del estudiante.");
         return;
@@ -563,8 +570,7 @@ function InscripcionInner() {
               <div className="rounded-lg border border-gray-200 p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <p className={labelClass + " mb-0"}>
-                    Persona(s) responsable(s){" "}
-                    <span className="font-normal text-gray-400">(opcional)</span>
+                    Persona responsable *
                   </p>
                   <button
                     type="button"
@@ -583,13 +589,15 @@ function InscripcionInner() {
                   {guardians.map((g, i) => (
                     <div key={i} className="grid gap-2 sm:grid-cols-2">
                       <input
-                        placeholder="Nombre"
+                        placeholder="Nombre completo *"
+                        required
                         value={g.name}
                         onChange={(e) => setGuardian(i, "name", e.target.value)}
                         className={inputClass}
                       />
                       <input
-                        placeholder="Parentesco (madre, padre…)"
+                        placeholder="Parentesco (madre, padre…) *"
+                        required
                         value={g.relationship}
                         onChange={(e) =>
                           setGuardian(i, "relationship", e.target.value)
@@ -597,13 +605,16 @@ function InscripcionInner() {
                         className={inputClass}
                       />
                       <input
-                        placeholder="Teléfono"
+                        placeholder="Teléfono *"
+                        required
+                        inputMode="tel"
                         value={g.phone}
                         onChange={(e) => setGuardian(i, "phone", e.target.value)}
                         className={inputClass}
                       />
                       <input
-                        placeholder="Correo"
+                        placeholder="Correo (opcional)"
+                        type="email"
                         value={g.email}
                         onChange={(e) => setGuardian(i, "email", e.target.value)}
                         className={inputClass}
