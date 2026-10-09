@@ -734,6 +734,8 @@ export interface BotConfig {
   enabled: boolean;
   knowledgeBase: string;
   systemPrompt: string | null;
+  portalEnabled: boolean;
+  dailyLimit: number;
   updatedAt: string;
 }
 

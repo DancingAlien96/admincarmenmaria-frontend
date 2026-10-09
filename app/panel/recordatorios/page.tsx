@@ -765,11 +765,21 @@ function BotConfigCard() {
   const [config, setConfig] = useState<BotConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [uso, setUso] = useState<{
+    preguntas30d: number;
+    alumnos30d: number;
+    configurado: boolean;
+  } | null>(null);
 
   useEffect(() => {
     void api<{ config: BotConfig }>("/api/whatsapp/config").then((r) =>
       setConfig(r.config)
     );
+    void api<{ preguntas30d: number; alumnos30d: number; configurado: boolean }>(
+      "/api/asistente/uso"
+    )
+      .then(setUso)
+      .catch(() => setUso(null));
   }, []);
 
   async function save() {
@@ -783,6 +793,8 @@ function BotConfigCard() {
           enabled: config.enabled,
           knowledgeBase: config.knowledgeBase,
           systemPrompt: config.systemPrompt,
+          portalEnabled: config.portalEnabled,
+          dailyLimit: config.dailyLimit,
         },
       });
       setNotice("Configuración guardada.");
@@ -803,9 +815,31 @@ function BotConfigCard() {
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-semibold text-brand-800">Bot de dudas (IA)</h2>
-        <label className="flex items-center gap-2 text-sm">
+      <h2 className="mb-1 font-semibold text-brand-800">Asistente de IA</h2>
+      <p className="mb-4 text-sm text-gray-500">
+        Responde dudas en el portal del estudiante (con los datos del propio
+        alumno: cuotas, fases, documentos y matrícula) y por WhatsApp. Solo
+        habla de temas de la escuela.
+      </p>
+      {uso && !uso.configurado && (
+        <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Falta la llave de OpenAI en el servidor: el asistente no responderá
+          hasta configurarla.
+        </p>
+      )}
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={config.portalEnabled}
+            onChange={(e) =>
+              setConfig({ ...config, portalEnabled: e.target.checked })
+            }
+          />
+          Asistente en el portal del estudiante
+        </label>
+        <label className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm">
           <input
             type="checkbox"
             checked={config.enabled}
@@ -813,12 +847,35 @@ function BotConfigCard() {
               setConfig({ ...config, enabled: e.target.checked })
             }
           />
-          {config.enabled ? "Activo" : "Inactivo"}
+          Responder por WhatsApp
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700 sm:col-span-2">
+          Preguntas por alumno al día:
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={config.dailyLimit}
+            onChange={(e) =>
+              setConfig({ ...config, dailyLimit: Number(e.target.value) })
+            }
+            className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm"
+          />
+          <span className="text-xs text-gray-400">
+            controla el costo de uso
+          </span>
         </label>
       </div>
+      {uso && (
+        <p className="mb-4 text-xs text-gray-500">
+          Últimos 30 días: {uso.preguntas30d} pregunta(s) de {uso.alumnos30d}{" "}
+          estudiante(s).
+        </p>
+      )}
 
       <label className="mb-1 block text-sm font-medium text-gray-700">
-        Información de la academia (la IA responde con base en esto)
+        Información de la escuela (la IA responde con base en esto: horarios,
+        requisitos, costos, fechas, contactos, reglamento…)
       </label>
       <textarea
         rows={8}

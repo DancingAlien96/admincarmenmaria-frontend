@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Bot,
   BookOpen,
   FileSignature,
   CircleDollarSign,
@@ -71,6 +72,7 @@ export default function PortalLayout({
         { href: "/portal/ebooks", label: "Material de estudio", icon: BookOpen },
         { href: "/portal/pagos", label: "Pagos", icon: CircleDollarSign },
         { href: "/portal/documentos", label: "Documentación", icon: Folder },
+        { href: "/portal/asistente", label: "Asistente virtual", icon: Bot },
         { href: "/portal/notificaciones", label: "Notificaciones", icon: Bell, badge: notifCount },
       ]
     : [
@@ -80,6 +82,7 @@ export default function PortalLayout({
         { href: "/portal/documentos", label: "Documentación", icon: Folder },
         { href: "/portal/matricula", label: "Matrícula", icon: FileSignature },
         { href: "/portal/ebooks", label: "E-Books", icon: BookOpen },
+        { href: "/portal/asistente", label: "Asistente virtual", icon: Bot },
         { href: "/portal/notificaciones", label: "Notificaciones", icon: Bell, badge: notifCount },
       ];
 
