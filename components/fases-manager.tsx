@@ -110,7 +110,7 @@ export function FasesManager({
             />
           ))}
           <RetoManager key={`reto-${fase}`} fase={fase} readOnly={readOnly} />
-          <EncuestaResultados key={`enc-${fase}`} fase={fase} />
+          <EncuestaManager key={`enc-${fase}`} fase={fase} readOnly={readOnly} />
         </div>
       )}
     </div>
@@ -401,6 +401,8 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState(["", "", "", ""]);
   const [correct, setCorrect] = useState(0);
+  // Si no es null, el formulario edita esa pregunta
+  const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -420,20 +422,41 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
     e.preventDefault();
     setBusy(true);
     try {
-      await api("/api/fase-extras/quiz", {
-        method: "POST",
-        body: { fase, question, options, correctIndex: correct },
-      });
-      setQuestion("");
-      setOptions(["", "", "", ""]);
-      setCorrect(0);
-      setAdding(false);
+      if (editId) {
+        await api(`/api/fase-extras/quiz/${editId}`, {
+          method: "PATCH",
+          body: { question, options, correctIndex: correct },
+        });
+      } else {
+        await api("/api/fase-extras/quiz", {
+          method: "POST",
+          body: { fase, question, options, correctIndex: correct },
+        });
+      }
+      cerrarForm();
       await load();
     } catch (err) {
       alert(err instanceof ApiError ? err.message : "No se pudo guardar la pregunta");
     } finally {
       setBusy(false);
     }
+  }
+
+  function cerrarForm() {
+    setQuestion("");
+    setOptions(["", "", "", ""]);
+    setCorrect(0);
+    setEditId(null);
+    setAdding(false);
+  }
+
+  function editar(p: Pregunta) {
+    setEditId(p.id);
+    setQuestion(p.question);
+    // Siempre 4 casillas como mínimo (las vacías se ignoran al guardar)
+    setOptions([...p.options, "", "", "", ""].slice(0, Math.max(4, p.options.length)));
+    setCorrect(p.correctIndex);
+    setAdding(true);
   }
 
   async function borrar(id: string) {
@@ -453,7 +476,7 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
         </h2>
         {!readOnly && (
           <button
-            onClick={() => setAdding((v) => !v)}
+            onClick={() => (adding ? cerrarForm() : setAdding(true))}
             className="text-sm font-medium text-brand-600 hover:underline"
           >
             {adding ? "Cerrar" : "+ Agregar pregunta"}
@@ -461,13 +484,17 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
         )}
       </div>
       <p className="mb-4 text-sm text-gray-500">
-        Preguntas de opción múltiple. El estudiante aprueba con 80 % (intentos
-        ilimitados). No afecta la nota, pero es requisito para desbloquear la
-        siguiente fase. Si no hay preguntas, la fase no exige reto.
+        Preguntas de opción múltiple. El estudiante lo puede responder cuando
+        completa la fase y aprueba con el mínimo de los Criterios de
+        aprobación (intentos ilimitados). No afecta la nota, pero es requisito
+        para desbloquear la siguiente fase. Si no hay preguntas, no se exige.
       </p>
 
       {adding && (
         <form onSubmit={guardar} className="mb-4 space-y-2 rounded-lg bg-gray-50 p-3">
+          {editId && (
+            <p className="text-xs font-medium text-brand-700">Editando pregunta</p>
+          )}
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -502,7 +529,7 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
             disabled={busy}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
           >
-            {busy ? "Guardando…" : "Guardar pregunta"}
+            {busy ? "Guardando…" : editId ? "Guardar cambios" : "Guardar pregunta"}
           </button>
         </form>
       )}
@@ -520,13 +547,21 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
                   {i + 1}. {p.question}
                 </p>
                 {!readOnly && (
-                  <button
-                    onClick={() => void borrar(p.id)}
-                    className="text-red-600 hover:text-red-700"
-                    aria-label="Eliminar pregunta"
-                  >
-                    <X aria-hidden className="h-4 w-4" />
-                  </button>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <button
+                      onClick={() => editar(p)}
+                      className="text-xs text-brand-600 hover:underline"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => void borrar(p.id)}
+                      className="text-red-600 hover:text-red-700"
+                      aria-label="Eliminar pregunta"
+                    >
+                      <X aria-hidden className="h-4 w-4" />
+                    </button>
+                  </span>
                 )}
               </div>
               <ul className="mt-1 space-y-0.5 text-xs">
@@ -569,57 +604,214 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
   );
 }
 
-// --- Resultados de la Encuesta de satisfacción ------------------------------
+// --- Encuesta de satisfacción (criterios por fase + resultados) -------------
+
+interface CriterioEncuesta {
+  id: string;
+  grupo: string;
+  clave: string;
+  nombre: string;
+  detalle: string | null;
+}
 
 interface EncuestaResumen {
   respuestas: number;
   secciones: {
-    clave: string;
     nombre: string;
     promedio: number | null;
-    criterios: { clave: string; nombre: string; promedio: number | null; votos: number }[];
+    criterios: { clave: string; promedio: number | null; votos: number }[];
   }[];
 }
 
-function EncuestaResultados({ fase }: { fase: number }) {
-  const [data, setData] = useState<EncuestaResumen | null>(null);
+function EncuestaManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
+  const [criterios, setCriterios] = useState<CriterioEncuesta[] | null>(null);
+  const [resumen, setResumen] = useState<EncuestaResumen | null>(null);
+  const [form, setForm] = useState<{
+    id: string | null;
+    grupo: string;
+    nombre: string;
+    detalle: string;
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const [c, r] = await Promise.all([
+      api<{ criterios: CriterioEncuesta[] }>(`/api/fase-extras/encuesta/criterios?fase=${fase}`),
+      api<EncuestaResumen>(`/api/fase-extras/encuesta/resumen?fase=${fase}`),
+    ]);
+    setCriterios(c.criterios);
+    setResumen(r);
+  }, [fase]);
 
   useEffect(() => {
-    api<EncuestaResumen>(`/api/fase-extras/encuesta/resumen?fase=${fase}`)
-      .then(setData)
-      .catch(() => undefined);
-  }, [fase]);
+    void load();
+  }, [load]);
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form) return;
+    setBusy(true);
+    try {
+      const body = { grupo: form.grupo, nombre: form.nombre, detalle: form.detalle || null };
+      if (form.id) {
+        await api(`/api/fase-extras/encuesta/criterios/${form.id}`, { method: "PATCH", body });
+      } else {
+        await api("/api/fase-extras/encuesta/criterios", {
+          method: "POST",
+          body: { fase, ...body },
+        });
+      }
+      setForm(null);
+      await load();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function quitar(c: CriterioEncuesta) {
+    if (!confirm(`¿Quitar "${c.nombre}" de la encuesta? Las respuestas anteriores se conservan.`)) return;
+    await api(`/api/fase-extras/encuesta/criterios/${c.id}`, { method: "DELETE" });
+    await load();
+  }
+
+  // Promedio por criterio (de las respuestas de los alumnos)
+  const promedios = new Map<string, { promedio: number | null; votos: number }>();
+  resumen?.secciones.forEach((s) => s.criterios.forEach((c) => promedios.set(c.clave, c)));
+  const grupos = [...new Set((criterios ?? []).map((c) => c.grupo))];
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
-      <h2 className="mb-1 flex items-center gap-2 font-semibold text-brand-800">
-        <Heart aria-hidden className="h-5 w-5" />
-        Encuesta de satisfacción
-      </h2>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-semibold text-brand-800">
+          <Heart aria-hidden className="h-5 w-5" />
+          Encuesta de satisfacción
+        </h2>
+        {!readOnly && (
+          <button
+            onClick={() =>
+              setForm(form ? null : { id: null, grupo: grupos[0] ?? "", nombre: "", detalle: "" })
+            }
+            className="text-sm font-medium text-brand-600 hover:underline"
+          >
+            {form ? "Cerrar" : "+ Agregar criterio"}
+          </button>
+        )}
+      </div>
       <p className="mb-4 text-sm text-gray-500">
-        {data ? `${data.respuestas} estudiante(s) han respondido en esta fase.` : "Cargando…"}
+        Lo que los estudiantes califican con 1 a 5 estrellas en esta fase.
+        {resumen ? ` ${resumen.respuestas} estudiante(s) han respondido.` : ""}
       </p>
-      {data && data.respuestas > 0 && (
-        <div className="grid gap-3 sm:grid-cols-3">
-          {data.secciones.map((s) => (
-            <div key={s.clave} className="rounded-lg bg-gray-50 p-3">
-              <p className="flex items-center justify-between text-sm font-semibold text-gray-800">
-                {s.nombre}
-                <span className="inline-flex items-center gap-1 text-amber-600">
-                  <Star aria-hidden className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                  {s.promedio ?? "—"}
-                </span>
-              </p>
-              <ul className="mt-2 space-y-1 text-xs">
-                {s.criterios.map((c) => (
-                  <li key={c.clave} className="flex justify-between gap-2 text-gray-600">
-                    <span className="truncate">{c.nombre}</span>
-                    <span className="shrink-0">{c.promedio ?? "—"}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+
+      {form && (
+        <form onSubmit={guardar} className="mb-4 space-y-2 rounded-lg bg-gray-50 p-3">
+          {form.id && <p className="text-xs font-medium text-brand-700">Editando criterio</p>}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input
+              value={form.grupo}
+              onChange={(e) => setForm({ ...form, grupo: e.target.value })}
+              list={`grupos-encuesta-${fase}`}
+              placeholder="Sección (ej. Instalaciones)"
+              required
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <datalist id={`grupos-encuesta-${fase}`}>
+              {grupos.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
+            <input
+              value={form.nombre}
+              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              placeholder="Criterio (ej. Puntualidad del docente)"
+              required
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+          <input
+            value={form.detalle}
+            onChange={(e) => setForm({ ...form, detalle: e.target.value })}
+            placeholder="Descripción breve (opcional)"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              {busy ? "Guardando…" : form.id ? "Guardar cambios" : "Agregar"}
+            </button>
+            <button type="button" onClick={() => setForm(null)} className="text-sm text-gray-500 hover:underline">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+
+      {!criterios ? (
+        <p className="text-sm text-gray-400">Cargando…</p>
+      ) : criterios.length === 0 ? (
+        <p className="text-sm text-gray-400">
+          Esta fase no tiene encuesta. Agrega criterios para que los estudiantes
+          la respondan.
+        </p>
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-3">
+          {grupos.map((g) => {
+            const sec = resumen?.secciones.find((s) => s.nombre === g);
+            return (
+              <div key={g} className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-2 flex items-center justify-between text-sm font-semibold text-gray-800">
+                  {g}
+                  <span className="inline-flex items-center gap-1 text-amber-600">
+                    <Star aria-hidden className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    {sec?.promedio ?? "—"}
+                  </span>
+                </p>
+                <ul className="space-y-2">
+                  {criterios
+                    .filter((c) => c.grupo === g)
+                    .map((c) => {
+                      const pr = promedios.get(c.clave);
+                      return (
+                        <li key={c.id} className="text-xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium text-gray-800">{c.nombre}</span>
+                            <span className="shrink-0 text-gray-500">
+                              {pr?.promedio ?? "—"}
+                              {pr && pr.votos > 0 ? ` (${pr.votos})` : ""}
+                            </span>
+                          </div>
+                          {c.detalle && <p className="text-gray-500">{c.detalle}</p>}
+                          {!readOnly && (
+                            <div className="mt-0.5 flex gap-3">
+                              <button
+                                onClick={() =>
+                                  setForm({
+                                    id: c.id,
+                                    grupo: c.grupo,
+                                    nombre: c.nombre,
+                                    detalle: c.detalle ?? "",
+                                  })
+                                }
+                                className="text-brand-600 hover:underline"
+                              >
+                                Editar
+                              </button>
+                              <button onClick={() => void quitar(c)} className="text-red-600 hover:underline">
+                                Quitar
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       )}
     </section>

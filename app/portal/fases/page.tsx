@@ -608,7 +608,7 @@ function Programado({ items }: { items: FaseContentItem[] }) {
         <SectionTitle
           icon={CalendarDays}
           title="Actividades y exámenes programados"
-          subtitle="Publicados por tu docente para esta fase"
+          subtitle="Fechas publicadas para esta fase"
         />
       </div>
       <ul className="divide-y divide-gray-100">
@@ -639,6 +639,9 @@ interface RetoData {
   fase: number;
   aprobacion: number;
   preguntas: { id: string; question: string; options: string[] }[];
+  // Se habilita al completar la fase (mientras tanto no llegan preguntas)
+  bloqueado: boolean;
+  totalPreguntas: number;
   intentos: number;
   aprobado: boolean;
   mejor: number | null;
@@ -667,9 +670,11 @@ function Reto({ fase, onAprobado }: { fase: FaseItem; onAprobado: () => void }) 
 
   const titulo = `${fase.nombre}: Reto de Comprensión`;
   const sub =
-    data.preguntas.length > 0
-      ? `${data.preguntas.length} preguntas · Aprobación: ${data.aprobacion}% · Intento #${data.intentos + 1}`
-      : "Aún no publicado";
+    data.totalPreguntas === 0
+      ? "Aún no publicado"
+      : data.bloqueado
+        ? `${data.totalPreguntas} preguntas · se habilita al completar la fase`
+        : `${data.totalPreguntas} preguntas · Aprobación: ${data.aprobacion}% · Intento #${data.intentos + 1}`;
 
   async function enviar() {
     setBusy(true);
@@ -706,8 +711,20 @@ function Reto({ fase, onAprobado }: { fase: FaseItem; onAprobado: () => void }) 
         <SectionTitle icon={Brain} tone="bg-amber-50 text-amber-600" title={titulo} subtitle={sub} />
       </div>
 
-      {data.preguntas.length === 0 ? (
-        <Vacio icon={Brain} text="Tu docente aún no ha publicado el reto de esta fase." />
+      {data.totalPreguntas === 0 ? (
+        <Vacio icon={Brain} text="La escuela aún no ha publicado el reto de esta fase." />
+      ) : data.bloqueado ? (
+        <div className="flex flex-col items-center px-5 py-10 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 text-gray-400">
+            <Lock aria-hidden className="h-8 w-8" />
+          </span>
+          <h3 className="mt-4 text-lg font-bold text-gray-900">Reto bloqueado</h3>
+          <p className="mt-2 max-w-md text-sm text-gray-600">
+            Se habilita cuando completes <b>{fase.nombre}</b>, es decir, cuando
+            todas tus tareas, actividades y exámenes de la fase estén
+            calificados. Al aprobarlo podrás avanzar a la siguiente fase.
+          </p>
+        </div>
       ) : !jugando ? (
         <div className="flex flex-col items-center px-5 py-10 text-center">
           <span
@@ -872,7 +889,8 @@ function Encuesta({ fase }: { fase: FaseItem }) {
     api<EncuestaData>(`/api/portal/encuesta/${fase.fase}`).then(setData).catch(() => undefined);
   }, [fase.fase]);
 
-  if (!data) return null;
+  // Sin criterios configurados para la fase no se muestra la encuesta
+  if (!data || data.secciones.length === 0) return null;
 
   async function calificar(clave: string, rating: number) {
     const antes = data!.ratings;
@@ -952,7 +970,7 @@ function Encuesta({ fase }: { fase: FaseItem }) {
                         label={c.nombre}
                       />
                     </div>
-                    <p className="text-xs text-gray-500">{c.detalle}</p>
+                    {c.detalle && <p className="text-xs text-gray-500">{c.detalle}</p>}
                   </li>
                 ))}
               </ul>
