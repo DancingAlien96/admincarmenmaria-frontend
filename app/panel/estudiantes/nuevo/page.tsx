@@ -14,6 +14,7 @@ function toPayload(v: StudentFormValues) {
   return {
     fullName: v.fullName,
     dpi: v.dpi,
+    taxId: v.taxId,
     birthDate: v.birthDate || null,
     enrollmentDate: v.enrollmentDate || null,
     department: v.department,

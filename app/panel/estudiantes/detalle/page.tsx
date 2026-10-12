@@ -33,6 +33,7 @@ import {
   StudentForm,
   type StudentFormValues,
 } from "@/components/student-form";
+import { FelAcciones } from "@/components/fel-recibo";
 import { uploadFile } from "@/lib/upload";
 
 const STATUSES: StudentStatus[] = ["ACTIVO", "EGRESADO", "BAJA"];
@@ -42,6 +43,7 @@ function toFormValues(s: StudentDetail): StudentFormValues {
   return {
     fullName: s.fullName,
     dpi: s.dpi ?? "",
+    taxId: s.taxId ?? "",
     birthDate: s.birthDate ? s.birthDate.slice(0, 10) : "",
     enrollmentDate: s.enrollmentDate ? s.enrollmentDate.slice(0, 10) : "",
     department: s.department ?? "",
@@ -126,6 +128,7 @@ function StudentDetailInner() {
       body: {
         fullName: values.fullName,
         dpi: values.dpi,
+        taxId: values.taxId,
         birthDate: values.birthDate || null,
         enrollmentDate: values.enrollmentDate || null,
         department: values.department,
@@ -295,6 +298,7 @@ function StudentDetailInner() {
             <InfoCard student={student} />
             {canPagos && (
               <CuotasCard
+                student={{ fullName: student.fullName, taxId: student.taxId, email: student.email }}
                 studentId={id}
                 canEdit={canPagosEdit}
                 canGenerate={canPagosEdit && student.status === "ACTIVO"}
@@ -356,12 +360,14 @@ function chargeEstado(c: StudentAccount["charges"][number]) {
 }
 
 function CuotasCard({
+  student,
   studentId,
   canEdit,
   canGenerate,
   refreshKey,
   onGenerar,
 }: {
+  student: { fullName: string; taxId: string | null; email: string | null };
   studentId: string;
   canEdit: boolean;
   canGenerate: boolean;
@@ -521,6 +527,19 @@ function CuotasCard({
                             Ver comprobante
                           </a>
                         )}
+                        <FelAcciones
+                          compact
+                          payment={{
+                            id: p.id,
+                            concept: c.concept,
+                            net: p.amount - p.discount,
+                            status: "ACTIVO",
+                            student,
+                          }}
+                          fel={p.fel}
+                          canEdit={canEdit}
+                          onChanged={reload}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -1716,6 +1735,7 @@ function InfoCard({ student }: { student: StudentDetail }) {
       </div>
       <dl className="grid gap-4 sm:grid-cols-2">
         <Field label="DPI" value={student.dpi} />
+        <Field label="Identificación Fiscal" value={student.taxId ?? "CF"} />
         <Field
           label="Fecha de nacimiento"
           value={student.birthDate?.slice(0, 10)}

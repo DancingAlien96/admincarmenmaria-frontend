@@ -96,14 +96,11 @@ export default function PortalPagosPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Descarga el recibo PDF del pago aprobado de la cuota
-  async function descargarComprobante(c: PortalCuota) {
+  // Descarga un PDF autenticado (comprobante o recibo FEL) de la cuota
+  async function descargarPdf(c: PortalCuota, path: string, nombre: string) {
     setDescargando(c.id);
     try {
-      const res = await fetch(
-        `${apiUrl}/api/portal/cuotas/${c.id}/comprobante`,
-        { credentials: "include" }
-      );
+      const res = await fetch(`${apiUrl}${path}`, { credentials: "include" });
       if (!res.ok) {
         const j = await res.json().catch(() => null);
         throw new Error(j?.error ?? "No se pudo descargar el comprobante");
@@ -112,7 +109,7 @@ export default function PortalPagosPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Comprobante ${c.concept}.pdf`;
+      a.download = nombre;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -120,6 +117,25 @@ export default function PortalPagosPage() {
     } finally {
       setDescargando(null);
     }
+  }
+
+  // Recibo PDF del pago aprobado de la cuota
+  function descargarComprobante(c: PortalCuota) {
+    return descargarPdf(
+      c,
+      `/api/portal/cuotas/${c.id}/comprobante`,
+      `Comprobante ${c.concept}.pdf`
+    );
+  }
+
+  // Recibo electrónico (FEL) certificado ante SAT
+  function descargarReciboFel(c: PortalCuota) {
+    if (!c.fel) return Promise.resolve();
+    return descargarPdf(
+      c,
+      `/api/portal/pagos/${c.fel.paymentId}/recibo-fel`,
+      `Recibo FEL ${c.fel.serie ?? ""}-${c.fel.numero ?? ""}.pdf`
+    );
   }
 
   if (loading || !data) {
@@ -271,16 +287,29 @@ export default function PortalPagosPage() {
                     </div>
 
                     {/* Acción */}
-                    <div className="shrink-0">
+                    <div className="flex shrink-0 flex-col gap-2">
                       {c.estado === "pagado" ? (
-                        <button
-                          onClick={() => void descargarComprobante(c)}
-                          disabled={descargando === c.id}
-                          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 disabled:opacity-60 sm:w-auto"
-                        >
-                          <Download aria-hidden className="h-4 w-4" />
-                          {descargando === c.id ? "Descargando…" : "Descargar Comprobante"}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => void descargarComprobante(c)}
+                            disabled={descargando === c.id}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 disabled:opacity-60 sm:w-auto"
+                          >
+                            <Download aria-hidden className="h-4 w-4" />
+                            {descargando === c.id ? "Descargando…" : "Descargar Comprobante"}
+                          </button>
+                          {c.fel && (
+                            <button
+                              onClick={() => void descargarReciboFel(c)}
+                              disabled={descargando === c.id}
+                              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 sm:w-auto"
+                              title="Recibo electrónico certificado ante la SAT"
+                            >
+                              <Download aria-hidden className="h-4 w-4" />
+                              Recibo FEL {c.fel.serie}-{c.fel.numero}
+                            </button>
+                          )}
+                        </>
                       ) : c.estado === "en_revision" ? (
                         <span className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 sm:w-auto">
                           <Clock aria-hidden className="h-4 w-4" />

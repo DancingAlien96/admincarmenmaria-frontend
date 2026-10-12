@@ -20,6 +20,7 @@ import type {
   PaymentTotals,
 } from "@/lib/types";
 import { RegisterPaymentForm } from "@/components/register-payment-form";
+import { FelAcciones, useFelEstado } from "@/components/fel-recibo";
 
 // Años para filtrar (del actual hacia atrás)
 const CURRENT_YEAR = new Date().getFullYear();
@@ -35,7 +36,9 @@ export default function PaymentsPage() {
   const [unlinked, setUnlinked] = useState(false);
   const [year, setYear] = useState("");
   const [cohort, setCohort] = useState("");
+  const [fel, setFel] = useState<"" | "certificado" | "error" | "sin">("");
   const [page, setPage] = useState(1);
+  const felEstado = useFelEstado();
 
   const [items, setItems] = useState<Payment[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -56,6 +59,7 @@ export default function PaymentsPage() {
       if (unlinked) params.set("unlinked", "true");
       if (year) params.set("year", year);
       if (cohort) params.set("cohort", cohort);
+      if (fel) params.set("fel", fel);
       params.set("page", String(page));
       const res = await api<{
         data: Payment[];
@@ -68,7 +72,7 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [source, status, method, unlinked, year, cohort, page]);
+  }, [source, status, method, unlinked, year, cohort, fel, page]);
 
   useEffect(() => {
     void load();
@@ -125,6 +129,12 @@ export default function PaymentsPage() {
             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Configurar cuotas
+          </Link>
+          <Link
+            href="/panel/pagos/fel"
+            className="rounded-lg border border-emerald-300 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+          >
+            Recibos FEL
           </Link>
           {canEdit && (
             <>
@@ -262,6 +272,22 @@ export default function PaymentsPage() {
           <option value="DEPOSITO">Depósito</option>
           <option value="TARJETA">Tarjeta</option>
         </select>
+        {felEstado?.configurado && (
+          <select
+            value={fel}
+            onChange={(e) => {
+              setFel(e.target.value as typeof fel);
+              setPage(1);
+            }}
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            title="Recibo electrónico (FEL)"
+          >
+            <option value="">Recibo FEL: todos</option>
+            <option value="certificado">Con recibo certificado</option>
+            <option value="sin">Sin recibo</option>
+            <option value="error">Con error al emitir</option>
+          </select>
+        )}
         <label className="flex items-center gap-2 text-sm text-gray-600">
           <input
             type="checkbox"
@@ -287,19 +313,20 @@ export default function PaymentsPage() {
               <th className="px-4 py-3">Origen</th>
               <th className="px-4 py-3 text-right">Neto</th>
               <th className="px-4 py-3">Estado</th>
+              <th className="px-4 py-3">Recibo FEL</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                   Cargando…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                   No hay pagos que coincidan.
                 </td>
               </tr>
@@ -354,6 +381,17 @@ export default function PaymentsPage() {
                     >
                       {p.status === "ACTIVO" ? "Activo" : "Anulado"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FelAcciones
+                        payment={p}
+                        fel={p.fel}
+                        canEdit={canEdit}
+                        onChanged={load}
+                        compact
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-3">
@@ -437,7 +475,7 @@ export default function PaymentsPage() {
                   {p.status === "ACTIVO" ? "Activo" : "Anulado"}
                 </span>
               </div>
-              <div className="mt-3 flex gap-4 border-t border-gray-100 pt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-gray-100 pt-3">
                 <a
                   href={`${apiUrl}/api/payments/${p.id}/receipt`}
                   target="_blank"
@@ -446,6 +484,13 @@ export default function PaymentsPage() {
                 >
                   Recibo
                 </a>
+                <FelAcciones
+                  payment={p}
+                  fel={p.fel}
+                  canEdit={canEdit}
+                  onChanged={load}
+                  compact
+                />
                 {canEdit && p.status === "ACTIVO" && (
                   <button
                     onClick={() => void annul(p)}

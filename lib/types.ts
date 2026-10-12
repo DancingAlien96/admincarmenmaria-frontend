@@ -119,6 +119,8 @@ export interface PortalCuota {
   saldo: number;
   dueDate: string;
   estado: CuotaEstado;
+  // Pago aprobado con recibo electrónico certificado (para descargarlo)
+  fel?: { paymentId: string; serie: string | null; numero: string | null } | null;
 }
 
 export interface PortalCuotas {
@@ -187,6 +189,15 @@ export interface ChargePayment {
   status: "ACTIVO" | "EN_REVISION";
   paidAt: string;
   receiptUrl: string | null;
+  // Recibo electrónico (FEL) más reciente del pago
+  fel?: {
+    id: string;
+    estado: FelEstado;
+    serie: string | null;
+    numero: string | null;
+    autorizacion: string | null;
+    error: string | null;
+  } | null;
 }
 
 export interface StudentAccount {
@@ -400,6 +411,8 @@ export interface StudentDetail {
   id: string;
   fullName: string;
   dpi: string | null;
+  // Identificación fiscal (NIT) para los recibos electrónicos (FEL); sin ella se emite a CF
+  taxId: string | null;
   birthDate: string | null;
   department: string | null;
   municipality: string | null;
@@ -652,10 +665,119 @@ export interface Payment {
   payerEmail: string | null;
   annulReason: string | null;
   annulledAt: string | null;
-  student: { id: string; fullName: string; dpi: string } | null;
+  student: { id: string; fullName: string; dpi: string | null; taxId: string | null } | null;
   feeType: { id: string; name: string; category: FeeCategory } | null;
   registeredBy: { name: string } | null;
   annulledBy: { name: string } | null;
+  // Recibo electrónico (FEL) más reciente del pago, si se emitió
+  fel: FelResumen | null;
+}
+
+// --- Recibos electrónicos (FEL · Digifact) ---
+
+export type FelEstado = "PENDIENTE" | "CERTIFICADO" | "ANULADO" | "ERROR";
+
+export interface FelResumen {
+  id: string;
+  estado: FelEstado;
+  tipo: string;
+  autorizacion: string | null;
+  serie: string | null;
+  numero: string | null;
+  fechaEmision: string | null;
+  fechaCertificacion: string | null;
+  receptorId: string;
+  receptorTipo: "NIT" | "CUI" | "CF";
+  receptorNombre: string;
+  granTotal: number;
+  error: string | null;
+  anuladoAt: string | null;
+  anuladoMotivo: string | null;
+  createdAt: string;
+  tieneXml: boolean;
+  tienePdfSat: boolean;
+}
+
+export interface FelItem {
+  numero: number;
+  tipo: "S" | "B";
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  precio: number;
+  descuento: number;
+  total: number;
+}
+
+export interface FelRecibo extends FelResumen {
+  internalUuid: string;
+  emisorNit: string;
+  emisorNombre: string;
+  emisorNombreComercial: string;
+  emisorAfiliacion: string;
+  emisorEstablecimiento: string;
+  emisorDireccion: string;
+  emisorMunicipio: string;
+  emisorDepartamento: string;
+  receptorCorreo: string | null;
+  receptorDireccion: string | null;
+  items: FelItem[];
+  frases: { tipo: number; escenario: number }[];
+  moneda: string;
+  updatedAt: string;
+  payment: {
+    id: string;
+    concept: string;
+    amount: number;
+    discount: number;
+    method: PaymentMethod;
+    paidAt: string;
+    status: string;
+    student: {
+      id: string;
+      fullName: string;
+      expedienteNumber: string | null;
+      taxId: string | null;
+      sede: string | null;
+    } | null;
+    registeredBy: { name: string } | null;
+  };
+  createdBy: { name: string } | null;
+  anuladoBy: { name: string } | null;
+}
+
+export interface FelEstadoInfo {
+  configurado: boolean;
+  ambiente: "pruebas" | "produccion" | null;
+  habilitado: boolean;
+  emitirAutomatico: boolean;
+  enviarCorreo: boolean;
+  emisorNit: string;
+}
+
+export interface FelEstablecimiento {
+  codigo: string;
+  nombre: string;
+  sede: string | null;
+  direccion: string;
+  codigoPostal: string;
+  municipio: string;
+  departamento: string;
+}
+
+export interface FelConfig {
+  habilitado: boolean;
+  emitirAutomatico: boolean;
+  enviarCorreo: boolean;
+  emisor: {
+    nit: string;
+    nombre: string;
+    nombreComercial: string;
+    afiliacionIva: "GEN" | "PEQ" | "EXE";
+    correo: string;
+  };
+  establecimientos: FelEstablecimiento[];
+  frases: { tipo: number; escenario: number }[];
 }
 
 export interface PaymentTotals {

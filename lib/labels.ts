@@ -10,6 +10,7 @@ import type {
   StudentStatus,
   TeacherDocType,
   TeacherRole,
+  FelEstado,
 } from "./types";
 
 export const TEACHER_ROLE_LABELS: Record<TeacherRole, string> = {
@@ -57,6 +58,20 @@ export const PAYMENT_SOURCE_LABELS: Record<PaymentSource, string> = {
 };
 
 // Formatea un monto en Quetzales
+export const FEL_ESTADO_LABELS: Record<FelEstado, string> = {
+  PENDIENTE: "En proceso",
+  CERTIFICADO: "Certificado",
+  ANULADO: "Anulado",
+  ERROR: "Error",
+};
+
+export const FEL_ESTADO_STYLES: Record<FelEstado, string> = {
+  PENDIENTE: "bg-gray-100 text-gray-600",
+  CERTIFICADO: "bg-emerald-100 text-emerald-800",
+  ANULADO: "bg-gray-200 text-gray-600 line-through",
+  ERROR: "bg-red-100 text-red-700",
+};
+
 export function formatGTQ(amount: number): string {
   return new Intl.NumberFormat("es-GT", {
     style: "currency",
