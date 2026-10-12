@@ -716,7 +716,7 @@ export interface FelItem {
 
 export interface FelReceipt extends FelSummary {
   internalUuid: string;
-  establishmentId: string | null;
+  establishmentId: number | null;
   issuerNit: string;
   issuerName: string;
   issuerCommercialName: string;
@@ -765,7 +765,7 @@ export interface FelStatusInfo {
 
 export interface FelEstablishment {
   // Presente en los establecimientos ya guardados; se reenvía al guardar
-  id?: string;
+  id?: number;
   code: string;
   commercialName: string;
   sede: string | null;
