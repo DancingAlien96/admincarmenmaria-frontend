@@ -296,11 +296,16 @@ function RecibosList({ canEdit }: { canEdit: boolean }) {
 
 function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
   const [cfg, setCfg] = useState<FelConfig | null>(null);
+  // Sedes del sistema entre las que se elige la de cada establecimiento
+  const [sedes, setSedes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
-    void api<{ config: FelConfig }>("/api/fel/config").then((r) => setCfg(r.config));
+    void api<{ config: FelConfig; sedes: string[] }>("/api/fel/config").then((r) => {
+      setCfg(r.config);
+      setSedes(r.sedes);
+    });
   }, []);
 
   if (!cfg) return <p className="text-gray-400">Cargando configuración…</p>;
@@ -399,7 +404,7 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           <div>
             <h2 className="font-semibold text-brand-800">Establecimientos</h2>
             <p className="text-xs text-gray-500">
-              Uno por sede. El recibo usa el establecimiento activo de la sede del pago o del alumno; si no coincide, el marcado como predeterminado.
+              Máximo uno por sede. El recibo usa el establecimiento activo de la sede del pago o del alumno; si no coincide, el marcado como predeterminado.
             </p>
           </div>
           <button
@@ -410,7 +415,7 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                 {
                   code: "",
                   commercialName: cfg.issuer.commercialName,
-                  sede: "",
+                  sede: null,
                   address: "",
                   postalCode: "",
                   municipality: "",
@@ -438,7 +443,23 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass}>Sede del sistema</label>
-                  <input className={inputClass} value={e.sede ?? ""} onChange={(ev) => setEst(i, { sede: ev.target.value })} placeholder="Chiquimula / Morales Izabal" />
+                  <select
+                    className={inputClass}
+                    value={e.sede ?? ""}
+                    onChange={(ev) => setEst(i, { sede: ev.target.value || null })}
+                  >
+                    <option value="">Sin sede asignada</option>
+                    {/* Una sede solo puede tener un establecimiento: las ya usadas se bloquean */}
+                    {[...new Set([...sedes, ...(e.sede ? [e.sede] : [])])].map((sede) => (
+                      <option
+                        key={sede}
+                        value={sede}
+                        disabled={cfg.establishments.some((o, j) => j !== i && o.sede === sede)}
+                      >
+                        {sede}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="sm:col-span-3">
                   <label className={labelClass}>Nombre comercial</label>
