@@ -10,7 +10,7 @@ import type {
   StudentStatus,
   TeacherDocType,
   TeacherRole,
-  FelEstado,
+  FelStatus,
 } from "./types";
 
 export const TEACHER_ROLE_LABELS: Record<TeacherRole, string> = {
@@ -58,17 +58,17 @@ export const PAYMENT_SOURCE_LABELS: Record<PaymentSource, string> = {
 };
 
 // Formatea un monto en Quetzales
-export const FEL_ESTADO_LABELS: Record<FelEstado, string> = {
-  PENDIENTE: "En proceso",
-  CERTIFICADO: "Certificado",
-  ANULADO: "Anulado",
+export const FEL_STATUS_LABELS: Record<FelStatus, string> = {
+  PENDING: "En proceso",
+  CERTIFIED: "Certificado",
+  VOIDED: "Anulado",
   ERROR: "Error",
 };
 
-export const FEL_ESTADO_STYLES: Record<FelEstado, string> = {
-  PENDIENTE: "bg-gray-100 text-gray-600",
-  CERTIFICADO: "bg-emerald-100 text-emerald-800",
-  ANULADO: "bg-gray-200 text-gray-600 line-through",
+export const FEL_STATUS_STYLES: Record<FelStatus, string> = {
+  PENDING: "bg-gray-100 text-gray-600",
+  CERTIFIED: "bg-emerald-100 text-emerald-800",
+  VOIDED: "bg-gray-200 text-gray-600 line-through",
   ERROR: "bg-red-100 text-red-700",
 };
 

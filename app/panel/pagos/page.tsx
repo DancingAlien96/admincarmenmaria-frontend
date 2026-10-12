@@ -20,7 +20,7 @@ import type {
   PaymentTotals,
 } from "@/lib/types";
 import { RegisterPaymentForm } from "@/components/register-payment-form";
-import { FelAcciones, useFelEstado } from "@/components/fel-recibo";
+import { FelAcciones, useFelStatus } from "@/components/fel-recibo";
 
 // Años para filtrar (del actual hacia atrás)
 const CURRENT_YEAR = new Date().getFullYear();
@@ -36,9 +36,9 @@ export default function PaymentsPage() {
   const [unlinked, setUnlinked] = useState(false);
   const [year, setYear] = useState("");
   const [cohort, setCohort] = useState("");
-  const [fel, setFel] = useState<"" | "certificado" | "error" | "sin">("");
+  const [fel, setFel] = useState<"" | "certified" | "error" | "none">("");
   const [page, setPage] = useState(1);
-  const felEstado = useFelEstado();
+  const felStatus = useFelStatus();
 
   const [items, setItems] = useState<Payment[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -272,7 +272,7 @@ export default function PaymentsPage() {
           <option value="DEPOSITO">Depósito</option>
           <option value="TARJETA">Tarjeta</option>
         </select>
-        {felEstado?.configurado && (
+        {felStatus?.configured && (
           <select
             value={fel}
             onChange={(e) => {
@@ -283,8 +283,8 @@ export default function PaymentsPage() {
             title="Recibo electrónico (FEL)"
           >
             <option value="">Recibo FEL: todos</option>
-            <option value="certificado">Con recibo certificado</option>
-            <option value="sin">Sin recibo</option>
+            <option value="certified">Con recibo certificado</option>
+            <option value="none">Sin recibo</option>
             <option value="error">Con error al emitir</option>
           </select>
         )}

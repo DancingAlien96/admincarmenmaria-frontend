@@ -8,9 +8,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { canAccess, FEL_ESTADO_LABELS, FEL_ESTADO_STYLES, formatGTQ } from "@/lib/labels";
-import type { FelConfig, FelEstado, FelEstadoInfo, FelRecibo, Pagination } from "@/lib/types";
-import { fmtFechaHora, invalidarFelEstado, ReciboModal } from "@/components/fel-recibo";
+import { canAccess, FEL_STATUS_LABELS, FEL_STATUS_STYLES, formatGTQ } from "@/lib/labels";
+import type { FelConfig, FelEstablishment, FelStatus, FelStatusInfo, FelReceipt, Pagination } from "@/lib/types";
+import { fmtFechaHora, invalidateFelStatus, ReciboModal } from "@/components/fel-recibo";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
@@ -21,13 +21,13 @@ export default function FelPage() {
   const canEdit = canAccess(user, "PAYMENTS", "EDITOR");
   const isAdmin = user?.role === "ADMIN";
   const [tab, setTab] = useState<"recibos" | "config">("recibos");
-  const [estado, setEstado] = useState<FelEstadoInfo | null>(null);
+  const [estado, setEstado] = useState<FelStatusInfo | null>(null);
   // Se incrementa para volver a consultar el estado (tras guardar la configuración)
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let activo = true;
-    api<FelEstadoInfo>("/api/fel/estado")
+    api<FelStatusInfo>("/api/fel/status")
       .then((r) => {
         if (activo) setEstado(r);
       })
@@ -78,7 +78,7 @@ export default function FelPage() {
       ) : (
         <ConfigForm
           onSaved={async () => {
-            invalidarFelEstado();
+            invalidateFelStatus();
             await loadEstado();
           }}
         />
@@ -92,19 +92,19 @@ function EstadoBanner({
   isAdmin,
   onConfigurar,
 }: {
-  estado: FelEstadoInfo | null;
+  estado: FelStatusInfo | null;
   isAdmin: boolean;
   onConfigurar: () => void;
 }) {
   if (!estado) return null;
-  if (!estado.configurado) {
+  if (!estado.configured) {
     return (
       <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
         Digifact no está configurado en el servidor (faltan las credenciales DIGIFACT_*). Mientras tanto no se pueden emitir recibos.
       </div>
     );
   }
-  if (!estado.habilitado) {
+  if (!estado.enabled) {
     return (
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
         <span>La emisión de recibos está <strong>desactivada</strong>.</span>
@@ -119,15 +119,15 @@ function EstadoBanner({
   return (
     <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
       <span>
-        Emisión <strong>activa</strong> · NIT emisor {estado.emisorNit}
+        Emisión <strong>activa</strong> · NIT emisor {estado.issuerNit}
       </span>
       <span>
         Ambiente:{" "}
-        <strong className={estado.ambiente === "pruebas" ? "text-amber-700" : ""}>
-          {estado.ambiente === "pruebas" ? "PRUEBAS (sin validez fiscal)" : "producción"}
+        <strong className={estado.environment === "test" ? "text-amber-700" : ""}>
+          {estado.environment === "test" ? "PRUEBAS (sin validez fiscal)" : "producción"}
         </strong>
       </span>
-      <span>Automático al aplicar pagos: <strong>{estado.emitirAutomatico ? "sí" : "no"}</strong></span>
+      <span>Automático al aplicar pagos: <strong>{estado.autoIssue ? "sí" : "no"}</strong></span>
     </div>
   );
 }
@@ -135,10 +135,10 @@ function EstadoBanner({
 // --- Listado -------------------------------------------------------------------
 
 function RecibosList({ canEdit }: { canEdit: boolean }) {
-  const [estadoFiltro, setEstadoFiltro] = useState<FelEstado | "">("");
+  const [estadoFiltro, setEstadoFiltro] = useState<FelStatus | "">("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [items, setItems] = useState<FelRecibo[]>([]);
+  const [items, setItems] = useState<FelReceipt[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [totalCertificado, setTotalCertificado] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -148,17 +148,17 @@ function RecibosList({ canEdit }: { canEdit: boolean }) {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (estadoFiltro) params.set("estado", estadoFiltro);
+      if (estadoFiltro) params.set("status", estadoFiltro);
       if (search.trim()) params.set("search", search.trim());
       params.set("page", String(page));
       const r = await api<{
-        data: FelRecibo[];
+        data: FelReceipt[];
         pagination: Pagination;
-        totales: { certificado: number };
-      }>(`/api/fel/recibos?${params.toString()}`);
+        totals: { certified: number };
+      }>(`/api/fel/receipts?${params.toString()}`);
       setItems(r.data);
       setPagination(r.pagination);
-      setTotalCertificado(r.totales.certificado);
+      setTotalCertificado(r.totals.certified);
     } finally {
       setLoading(false);
     }
@@ -175,16 +175,16 @@ function RecibosList({ canEdit }: { canEdit: boolean }) {
         <select
           value={estadoFiltro}
           onChange={(e) => {
-            setEstadoFiltro(e.target.value as FelEstado | "");
+            setEstadoFiltro(e.target.value as FelStatus | "");
             setPage(1);
           }}
           className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
         >
           <option value="">Todos los estados</option>
-          <option value="CERTIFICADO">Certificados</option>
+          <option value="CERTIFIED">Certificados</option>
           <option value="ERROR">Con error</option>
-          <option value="ANULADO">Anulados</option>
-          <option value="PENDIENTE">En proceso</option>
+          <option value="VOIDED">Anulados</option>
+          <option value="PENDING">En proceso</option>
         </select>
         <input
           value={search}
@@ -224,20 +224,20 @@ function RecibosList({ canEdit }: { canEdit: boolean }) {
               </tr>
             ) : (
               items.map((r) => (
-                <tr key={r.id} className={r.estado === "ANULADO" ? "opacity-60" : ""}>
-                  <td className="px-4 py-3 text-gray-600">{fmtFechaHora(r.fechaCertificacion ?? r.createdAt)}</td>
+                <tr key={r.id} className={r.status === "VOIDED" ? "opacity-60" : ""}>
+                  <td className="px-4 py-3 text-gray-600">{fmtFechaHora(r.certifiedAt ?? r.createdAt)}</td>
                   <td className="px-4 py-3 text-gray-800">
-                    {r.serie && r.numero ? `${r.serie} · ${r.numero}` : "—"}
-                    {r.autorizacion && (
-                      <span className="block max-w-[220px] truncate text-[10px] text-gray-400" title={r.autorizacion}>
-                        {r.autorizacion}
+                    {r.series && r.number ? `${r.series} · ${r.number}` : "—"}
+                    {r.authorizationNumber && (
+                      <span className="block max-w-[220px] truncate text-[10px] text-gray-400" title={r.authorizationNumber}>
+                        {r.authorizationNumber}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-800">
-                    {r.receptorNombre}
+                    {r.receiverName}
                     <span className="block text-xs text-gray-400">
-                      {r.receptorTipo === "CUI" ? "CUI" : "NIT"} {r.receptorId}
+                      {r.receiverTaxIdType === "CUI" ? "CUI" : "NIT"} {r.receiverTaxId}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
@@ -251,10 +251,10 @@ function RecibosList({ canEdit }: { canEdit: boolean }) {
                       </Link>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right font-medium text-gray-800">{formatGTQ(r.granTotal)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-gray-800">{formatGTQ(r.grandTotal)}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${FEL_ESTADO_STYLES[r.estado]}`} title={r.error ?? undefined}>
-                      {FEL_ESTADO_LABELS[r.estado]}
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${FEL_STATUS_STYLES[r.status]}`} title={r.error ?? undefined}>
+                      {FEL_STATUS_LABELS[r.status]}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -306,13 +306,19 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
   if (!cfg) return <p className="text-gray-400">Cargando configuración…</p>;
 
   const set = <K extends keyof FelConfig>(k: K, v: FelConfig[K]) => setCfg({ ...cfg, [k]: v });
-  const setEmisor = <K extends keyof FelConfig["emisor"]>(k: K, v: FelConfig["emisor"][K]) =>
-    setCfg({ ...cfg, emisor: { ...cfg.emisor, [k]: v } });
-  const setEst = (i: number, patch: Partial<FelConfig["establecimientos"][number]>) =>
-    setCfg({
-      ...cfg,
-      establecimientos: cfg.establecimientos.map((e, j) => (j === i ? { ...e, ...patch } : e)),
-    });
+  const setIssuer = <K extends keyof FelConfig["issuer"]>(k: K, v: FelConfig["issuer"][K]) =>
+    setCfg({ ...cfg, issuer: { ...cfg.issuer, [k]: v } });
+  // Garantiza exactamente un establecimiento predeterminado: si ninguno (o más
+  // de uno) está marcado, queda el primero marcado.
+  const setEstablishments = (list: FelEstablishment[]) => {
+    const found = list.findIndex((e) => e.isDefault);
+    const def = found === -1 ? 0 : found;
+    set("establishments", list.map((e, j) => ({ ...e, isDefault: j === def })));
+  };
+  const setEst = (i: number, patch: Partial<FelEstablishment>) =>
+    setEstablishments(cfg.establishments.map((e, j) => (j === i ? { ...e, ...patch } : e)));
+  const setDefaultEst = (i: number) =>
+    set("establishments", cfg.establishments.map((e, j) => ({ ...e, isDefault: j === i })));
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -342,20 +348,20 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
         <h2 className="mb-3 font-semibold text-brand-800">Emisión</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <Toggle
-            checked={cfg.habilitado}
-            onChange={(v) => set("habilitado", v)}
+            checked={cfg.enabled}
+            onChange={(v) => set("enabled", v)}
             label="Permitir emitir recibos"
             hint="Muestra el botón «Emitir recibo FEL» en los pagos."
           />
           <Toggle
-            checked={cfg.emitirAutomatico}
-            onChange={(v) => set("emitirAutomatico", v)}
+            checked={cfg.autoIssue}
+            onChange={(v) => set("autoIssue", v)}
             label="Emitir al aplicar un pago"
             hint="Registro manual, boleta aprobada o tarjeta confirmada. El correo de confirmación lleva el DTE y su QR."
           />
           <Toggle
-            checked={cfg.enviarCorreo}
-            onChange={(v) => set("enviarCorreo", v)}
+            checked={cfg.sendEmail}
+            onChange={(v) => set("sendEmail", v)}
             label="Correo al emitir a mano"
             hint="Envía el recibo al correo del receptor cuando se emite desde el panel."
           />
@@ -367,11 +373,11 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className={labelClass}>NIT</label>
-            <input className={inputClass} value={cfg.emisor.nit} onChange={(e) => setEmisor("nit", e.target.value)} required />
+            <input className={inputClass} value={cfg.issuer.nit} onChange={(e) => setIssuer("nit", e.target.value)} required />
           </div>
           <div>
             <label className={labelClass}>Afiliación IVA</label>
-            <select className={inputClass} value={cfg.emisor.afiliacionIva} onChange={(e) => setEmisor("afiliacionIva", e.target.value as FelConfig["emisor"]["afiliacionIva"])}>
+            <select className={inputClass} value={cfg.issuer.taxAffiliation} onChange={(e) => setIssuer("taxAffiliation", e.target.value as FelConfig["issuer"]["taxAffiliation"])}>
               <option value="GEN">GEN · General</option>
               <option value="PEQ">PEQ · Pequeño contribuyente</option>
               <option value="EXE">EXE · Exento</option>
@@ -379,15 +385,15 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Nombre / razón social (NombreEmisor)</label>
-            <input className={inputClass} value={cfg.emisor.nombre} onChange={(e) => setEmisor("nombre", e.target.value)} required />
+            <input className={inputClass} value={cfg.issuer.name} onChange={(e) => setIssuer("name", e.target.value)} required />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Nombre comercial</label>
-            <input className={inputClass} value={cfg.emisor.nombreComercial} onChange={(e) => setEmisor("nombreComercial", e.target.value)} required />
+            <input className={inputClass} value={cfg.issuer.commercialName} onChange={(e) => setIssuer("commercialName", e.target.value)} required />
           </div>
           <div className="sm:col-span-2">
             <label className={labelClass}>Correo del emisor (opcional)</label>
-            <input type="email" className={inputClass} value={cfg.emisor.correo} onChange={(e) => setEmisor("correo", e.target.value)} />
+            <input type="email" className={inputClass} value={cfg.issuer.email} onChange={(e) => setIssuer("email", e.target.value)} />
           </div>
         </div>
       </section>
@@ -397,15 +403,24 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           <div>
             <h2 className="font-semibold text-brand-800">Establecimientos</h2>
             <p className="text-xs text-gray-500">
-              Uno por sede. El recibo usa el establecimiento de la sede del pago o del alumno; si no coincide, el primero.
+              Uno por sede. El recibo usa el establecimiento de la sede del pago o del alumno; si no coincide, el marcado como predeterminado.
             </p>
           </div>
           <button
             type="button"
             onClick={() =>
-              set("establecimientos", [
-                ...cfg.establecimientos,
-                { codigo: "", nombre: cfg.emisor.nombreComercial, sede: "", direccion: "", codigoPostal: "", municipio: "", departamento: "" },
+              setEstablishments([
+                ...cfg.establishments,
+                {
+                  code: "",
+                  commercialName: cfg.issuer.commercialName,
+                  sede: "",
+                  address: "",
+                  postalCode: "",
+                  municipality: "",
+                  department: "",
+                  isDefault: cfg.establishments.length === 0,
+                },
               ])
             }
             className="inline-flex items-center gap-1 rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
@@ -414,12 +429,12 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           </button>
         </div>
         <div className="space-y-3">
-          {cfg.establecimientos.map((e, i) => (
-            <div key={i} className="rounded-lg border border-gray-100 bg-gray-50/60 p-3">
+          {cfg.establishments.map((e, i) => (
+            <div key={e.id ?? `nuevo-${i}`} className="rounded-lg border border-gray-100 bg-gray-50/60 p-3">
               <div className="grid gap-3 sm:grid-cols-6">
                 <div>
                   <label className={labelClass}>Código SAT</label>
-                  <input className={inputClass} value={e.codigo} onChange={(ev) => setEst(i, { codigo: ev.target.value })} required />
+                  <input className={inputClass} value={e.code} onChange={(ev) => setEst(i, { code: ev.target.value })} required />
                 </div>
                 <div className="sm:col-span-2">
                   <label className={labelClass}>Sede del sistema</label>
@@ -427,34 +442,48 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                 </div>
                 <div className="sm:col-span-3">
                   <label className={labelClass}>Nombre comercial</label>
-                  <input className={inputClass} value={e.nombre} onChange={(ev) => setEst(i, { nombre: ev.target.value })} required />
+                  <input className={inputClass} value={e.commercialName} onChange={(ev) => setEst(i, { commercialName: ev.target.value })} required />
                 </div>
                 <div className="sm:col-span-3">
                   <label className={labelClass}>Dirección</label>
-                  <input className={inputClass} value={e.direccion} onChange={(ev) => setEst(i, { direccion: ev.target.value })} required />
+                  <input className={inputClass} value={e.address} onChange={(ev) => setEst(i, { address: ev.target.value })} required />
                 </div>
                 <div>
                   <label className={labelClass}>Código postal</label>
-                  <input className={inputClass} value={e.codigoPostal} onChange={(ev) => setEst(i, { codigoPostal: ev.target.value })} required />
+                  <input className={inputClass} value={e.postalCode} onChange={(ev) => setEst(i, { postalCode: ev.target.value })} required />
                 </div>
                 <div>
                   <label className={labelClass}>Municipio</label>
-                  <input className={inputClass} value={e.municipio} onChange={(ev) => setEst(i, { municipio: ev.target.value })} required />
+                  <input className={inputClass} value={e.municipality} onChange={(ev) => setEst(i, { municipality: ev.target.value })} required />
                 </div>
                 <div>
                   <label className={labelClass}>Departamento</label>
-                  <input className={inputClass} value={e.departamento} onChange={(ev) => setEst(i, { departamento: ev.target.value })} required />
+                  <input className={inputClass} value={e.department} onChange={(ev) => setEst(i, { department: ev.target.value })} required />
                 </div>
               </div>
-              {cfg.establecimientos.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => set("establecimientos", cfg.establecimientos.filter((_, j) => j !== i))}
-                  className="mt-2 inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <label
+                  className="inline-flex cursor-pointer items-center gap-2 text-xs text-gray-700"
+                  title="Se usa cuando la sede del pago no coincide con ningún establecimiento"
                 >
-                  <Trash2 aria-hidden className="h-3.5 w-3.5" /> Quitar
-                </button>
-              )}
+                  <input
+                    type="radio"
+                    name="fel-establecimiento-predeterminado"
+                    checked={e.isDefault}
+                    onChange={() => setDefaultEst(i)}
+                  />
+                  Predeterminado
+                </label>
+                {cfg.establishments.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setEstablishments(cfg.establishments.filter((_, j) => j !== i))}
+                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:underline"
+                  >
+                    <Trash2 aria-hidden className="h-3.5 w-3.5" /> Quitar
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -470,14 +499,14 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           </div>
           <button
             type="button"
-            onClick={() => set("frases", [...cfg.frases, { tipo: 1, escenario: 1 }])}
+            onClick={() => set("phrases", [...cfg.phrases, { phraseType: 1, scenarioCode: 1 }])}
             className="inline-flex items-center gap-1 rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
           >
             <Plus aria-hidden className="h-3.5 w-3.5" /> Agregar
           </button>
         </div>
         <div className="flex flex-wrap gap-3">
-          {cfg.frases.map((f, i) => (
+          {cfg.phrases.map((f, i) => (
             <div key={i} className="flex items-end gap-2 rounded-lg border border-gray-100 bg-gray-50/60 p-2">
               <div>
                 <label className={labelClass}>Tipo</label>
@@ -485,8 +514,8 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                   type="number"
                   min={1}
                   className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                  value={f.tipo}
-                  onChange={(e) => set("frases", cfg.frases.map((x, j) => (j === i ? { ...x, tipo: Number(e.target.value) } : x)))}
+                  value={f.phraseType}
+                  onChange={(e) => set("phrases", cfg.phrases.map((x, j) => (j === i ? { ...x, phraseType: Number(e.target.value) } : x)))}
                 />
               </div>
               <div>
@@ -495,12 +524,12 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                   type="number"
                   min={1}
                   className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-                  value={f.escenario}
-                  onChange={(e) => set("frases", cfg.frases.map((x, j) => (j === i ? { ...x, escenario: Number(e.target.value) } : x)))}
+                  value={f.scenarioCode}
+                  onChange={(e) => set("phrases", cfg.phrases.map((x, j) => (j === i ? { ...x, scenarioCode: Number(e.target.value) } : x)))}
                 />
               </div>
-              {cfg.frases.length > 1 && (
-                <button type="button" onClick={() => set("frases", cfg.frases.filter((_, j) => j !== i))} className="pb-2 text-red-600" aria-label="Quitar frase">
+              {cfg.phrases.length > 1 && (
+                <button type="button" onClick={() => set("phrases", cfg.phrases.filter((_, j) => j !== i))} className="pb-2 text-red-600" aria-label="Quitar frase">
                   <Trash2 aria-hidden className="h-4 w-4" />
                 </button>
               )}

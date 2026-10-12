@@ -134,7 +134,7 @@ export default function PortalPagosPage() {
     return descargarPdf(
       c,
       `/api/portal/pagos/${c.fel.paymentId}/recibo-fel`,
-      `Recibo FEL ${c.fel.serie ?? ""}-${c.fel.numero ?? ""}.pdf`
+      `Recibo FEL ${c.fel.series ?? ""}-${c.fel.number ?? ""}.pdf`
     );
   }
 
@@ -306,7 +306,7 @@ export default function PortalPagosPage() {
                               title="Recibo electrónico certificado ante la SAT"
                             >
                               <Download aria-hidden className="h-4 w-4" />
-                              Recibo FEL {c.fel.serie}-{c.fel.numero}
+                              Recibo FEL {c.fel.series}-{c.fel.number}
                             </button>
                           )}
                         </>

@@ -120,7 +120,7 @@ export interface PortalCuota {
   dueDate: string;
   estado: CuotaEstado;
   // Pago aprobado con recibo electrónico certificado (para descargarlo)
-  fel?: { paymentId: string; serie: string | null; numero: string | null } | null;
+  fel?: { paymentId: string; series: string | null; number: string | null } | null;
 }
 
 export interface PortalCuotas {
@@ -192,10 +192,10 @@ export interface ChargePayment {
   // Recibo electrónico (FEL) más reciente del pago
   fel?: {
     id: string;
-    estado: FelEstado;
-    serie: string | null;
-    numero: string | null;
-    autorizacion: string | null;
+    status: FelStatus;
+    series: string | null;
+    number: string | null;
+    authorizationNumber: string | null;
     error: string | null;
   } | null;
 }
@@ -670,60 +670,68 @@ export interface Payment {
   registeredBy: { name: string } | null;
   annulledBy: { name: string } | null;
   // Recibo electrónico (FEL) más reciente del pago, si se emitió
-  fel: FelResumen | null;
+  fel: FelSummary | null;
 }
 
 // --- Recibos electrónicos (FEL · Digifact) ---
 
-export type FelEstado = "PENDIENTE" | "CERTIFICADO" | "ANULADO" | "ERROR";
+export type FelStatus = "PENDING" | "CERTIFIED" | "VOIDED" | "ERROR";
 
-export interface FelResumen {
+export interface FelPhrase {
+  phraseType: number;
+  scenarioCode: number;
+}
+
+export interface FelSummary {
   id: string;
-  estado: FelEstado;
-  tipo: string;
-  autorizacion: string | null;
-  serie: string | null;
-  numero: string | null;
-  fechaEmision: string | null;
-  fechaCertificacion: string | null;
-  receptorId: string;
-  receptorTipo: "NIT" | "CUI" | "CF";
-  receptorNombre: string;
-  granTotal: number;
+  status: FelStatus;
+  documentType: string;
+  authorizationNumber: string | null;
+  series: string | null;
+  number: string | null;
+  emittedAt: string | null;
+  certifiedAt: string | null;
+  receiverTaxId: string;
+  receiverTaxIdType: "NIT" | "CUI" | "CF";
+  receiverName: string;
+  grandTotal: number;
   error: string | null;
-  anuladoAt: string | null;
-  anuladoMotivo: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
   createdAt: string;
-  tieneXml: boolean;
-  tienePdfSat: boolean;
+  hasXml: boolean;
+  hasSatPdf: boolean;
 }
 
 export interface FelItem {
-  numero: number;
-  tipo: "S" | "B";
-  descripcion: string;
-  cantidad: number;
-  unidad: string;
-  precio: number;
-  descuento: number;
+  position: number;
+  itemType: "S" | "B";
+  description: string;
+  quantity: number;
+  unitOfMeasure: string;
+  unitPrice: number;
+  discount: number;
   total: number;
 }
 
-export interface FelRecibo extends FelResumen {
+export interface FelReceipt extends FelSummary {
   internalUuid: string;
-  emisorNit: string;
-  emisorNombre: string;
-  emisorNombreComercial: string;
-  emisorAfiliacion: string;
-  emisorEstablecimiento: string;
-  emisorDireccion: string;
-  emisorMunicipio: string;
-  emisorDepartamento: string;
-  receptorCorreo: string | null;
-  receptorDireccion: string | null;
+  establishmentId: string | null;
+  issuerNit: string;
+  issuerName: string;
+  issuerCommercialName: string;
+  issuerTaxAffiliation: string;
+  issuerEstablishmentCode: string;
+  issuerAddress: string;
+  issuerPostalCode: string;
+  issuerMunicipality: string;
+  issuerDepartment: string;
+  issuerEmail: string | null;
+  receiverEmail: string | null;
+  receiverAddress: string | null;
   items: FelItem[];
-  frases: { tipo: number; escenario: number }[];
-  moneda: string;
+  phrases: FelPhrase[];
+  currency: string;
   updatedAt: string;
   payment: {
     id: string;
@@ -743,41 +751,45 @@ export interface FelRecibo extends FelResumen {
     registeredBy: { name: string } | null;
   };
   createdBy: { name: string } | null;
-  anuladoBy: { name: string } | null;
+  voidedBy: { name: string } | null;
 }
 
-export interface FelEstadoInfo {
-  configurado: boolean;
-  ambiente: "pruebas" | "produccion" | null;
-  habilitado: boolean;
-  emitirAutomatico: boolean;
-  enviarCorreo: boolean;
-  emisorNit: string;
+export interface FelStatusInfo {
+  configured: boolean;
+  environment: "test" | "production" | null;
+  enabled: boolean;
+  autoIssue: boolean;
+  sendEmail: boolean;
+  issuerNit: string;
 }
 
-export interface FelEstablecimiento {
-  codigo: string;
-  nombre: string;
+export interface FelEstablishment {
+  // Presente en los establecimientos ya guardados; se reenvía al guardar
+  id?: string;
+  code: string;
+  commercialName: string;
   sede: string | null;
-  direccion: string;
-  codigoPostal: string;
-  municipio: string;
-  departamento: string;
+  address: string;
+  postalCode: string;
+  municipality: string;
+  department: string;
+  // Se usa cuando la sede del pago no coincide con ningún establecimiento
+  isDefault: boolean;
 }
 
 export interface FelConfig {
-  habilitado: boolean;
-  emitirAutomatico: boolean;
-  enviarCorreo: boolean;
-  emisor: {
+  enabled: boolean;
+  autoIssue: boolean;
+  sendEmail: boolean;
+  issuer: {
     nit: string;
-    nombre: string;
-    nombreComercial: string;
-    afiliacionIva: "GEN" | "PEQ" | "EXE";
-    correo: string;
+    name: string;
+    commercialName: string;
+    taxAffiliation: "GEN" | "PEQ" | "EXE";
+    email: string;
   };
-  establecimientos: FelEstablecimiento[];
-  frases: { tipo: number; escenario: number }[];
+  establishments: FelEstablishment[];
+  phrases: FelPhrase[];
 }
 
 export interface PaymentTotals {

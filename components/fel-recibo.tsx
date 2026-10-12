@@ -7,19 +7,19 @@ import { useCallback, useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Ban, Download, FileText, RefreshCw, Send, X } from "lucide-react";
 import { api, ApiError, apiUrl } from "@/lib/api";
-import { FEL_ESTADO_LABELS, FEL_ESTADO_STYLES, formatGTQ } from "@/lib/labels";
-import type { FelEstado, FelEstadoInfo, FelRecibo } from "@/lib/types";
+import { FEL_STATUS_LABELS, FEL_STATUS_STYLES, formatGTQ } from "@/lib/labels";
+import type { FelStatus, FelStatusInfo, FelReceipt } from "@/lib/types";
 
 // --- Estado de la integración (se consulta una vez por sesión) --------------
 
-let felEstadoCache: FelEstadoInfo | null = null;
-let felEstadoPromise: Promise<FelEstadoInfo> | null = null;
+let felEstadoCache: FelStatusInfo | null = null;
+let felEstadoPromise: Promise<FelStatusInfo> | null = null;
 
-export function useFelEstado(): FelEstadoInfo | null {
-  const [estado, setEstado] = useState<FelEstadoInfo | null>(felEstadoCache);
+export function useFelStatus(): FelStatusInfo | null {
+  const [estado, setEstado] = useState<FelStatusInfo | null>(felEstadoCache);
   useEffect(() => {
     if (felEstadoCache) return;
-    felEstadoPromise ??= api<FelEstadoInfo>("/api/fel/estado").then((r) => {
+    felEstadoPromise ??= api<FelStatusInfo>("/api/fel/status").then((r) => {
       felEstadoCache = r;
       return r;
     });
@@ -28,7 +28,7 @@ export function useFelEstado(): FelEstadoInfo | null {
   return estado;
 }
 
-export function invalidarFelEstado() {
+export function invalidateFelStatus() {
   felEstadoCache = null;
   felEstadoPromise = null;
 }
@@ -36,15 +36,15 @@ export function invalidarFelEstado() {
 // --- Utilidades --------------------------------------------------------------
 
 export function urlVerificacionSat(r: {
-  autorizacion: string | null;
-  emisorNit: string;
-  receptorId: string;
-  granTotal: number;
+  authorizationNumber: string | null;
+  issuerNit: string;
+  receiverTaxId: string;
+  grandTotal: number;
 }): string {
   return (
     "https://felpub.c.sat.gob.gt/verificador-web/publico/vistas/verificacionDte.jsf" +
-    `?tipo=autorizacion&numero=${(r.autorizacion ?? "").toUpperCase()}` +
-    `&emisor=${r.emisorNit}&receptor=${r.receptorId}&monto=${r.granTotal.toFixed(2)}`
+    `?tipo=autorizacion&numero=${(r.authorizationNumber ?? "").toUpperCase()}` +
+    `&emisor=${r.issuerNit}&receptor=${r.receiverTaxId}&monto=${r.grandTotal.toFixed(2)}`
   );
 }
 
@@ -63,9 +63,9 @@ export function fmtFechaHora(iso: string | null): string {
 
 type FelMin = {
   id: string;
-  estado: FelEstado;
-  serie: string | null;
-  numero: string | null;
+  status: FelStatus;
+  series: string | null;
+  number: string | null;
   error?: string | null;
 };
 
@@ -79,10 +79,10 @@ export function FelBadge({
 }) {
   if (!fel) return null;
   const label =
-    fel.estado === "CERTIFICADO" && fel.numero
-      ? `FEL ${fel.serie ?? ""}-${fel.numero}`
-      : `FEL · ${FEL_ESTADO_LABELS[fel.estado]}`;
-  const cls = `inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${FEL_ESTADO_STYLES[fel.estado]}`;
+    fel.status === "CERTIFIED" && fel.number
+      ? `FEL ${fel.series ?? ""}-${fel.number}`
+      : `FEL · ${FEL_STATUS_LABELS[fel.status]}`;
+  const cls = `inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${FEL_STATUS_STYLES[fel.status]}`;
   return onClick ? (
     <button type="button" onClick={onClick} className={`${cls} hover:opacity-80`} title={fel.error ?? undefined}>
       {label}
@@ -120,15 +120,15 @@ export function FelAcciones({
   onChanged: () => void | Promise<void>;
   compact?: boolean;
 }) {
-  const estado = useFelEstado();
+  const estado = useFelStatus();
   const [verId, setVerId] = useState<string | null>(null);
   const [emitir, setEmitir] = useState(false);
 
   const puedeEmitir =
     canEdit &&
     payment.status === "ACTIVO" &&
-    Boolean(estado?.configurado && estado?.habilitado) &&
-    (!fel || fel.estado === "ANULADO" || fel.estado === "ERROR");
+    Boolean(estado?.configured && estado?.enabled) &&
+    (!fel || fel.status === "VOIDED" || fel.status === "ERROR");
 
   return (
     <>
@@ -143,7 +143,7 @@ export function FelAcciones({
               : "rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
           }
         >
-          {fel?.estado === "ERROR" ? "Reintentar FEL" : fel?.estado === "ANULADO" ? "Nuevo recibo FEL" : "Emitir recibo FEL"}
+          {fel?.status === "ERROR" ? "Reintentar FEL" : fel?.status === "VOIDED" ? "Nuevo recibo FEL" : "Emitir recibo FEL"}
         </button>
       )}
       {verId && (
@@ -202,13 +202,13 @@ export function EmitirReciboModal({
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/fel/pagos/${payment.id}/emitir`, {
+      await api(`/api/fel/payments/${payment.id}/issue`, {
         method: "POST",
         body: {
-          receptorId: receptorId.trim() || "CF",
-          receptorNombre: receptorNombre.trim() || undefined,
-          receptorCorreo: receptorCorreo.trim(),
-          descripcion: descripcion.trim() || undefined,
+          receiverTaxId: receptorId.trim() || "CF",
+          receiverName: receptorNombre.trim() || undefined,
+          receiverEmail: receptorCorreo.trim(),
+          description: descripcion.trim() || undefined,
         },
       });
       await onDone();
@@ -312,7 +312,7 @@ export function ReciboModal({
   onChanged: () => void | Promise<void>;
   onReintentar?: () => void;
 }) {
-  const [recibo, setRecibo] = useState<FelRecibo | null>(null);
+  const [recibo, setRecibo] = useState<FelReceipt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [anulando, setAnulando] = useState(false);
@@ -323,9 +323,9 @@ export function ReciboModal({
 
   useEffect(() => {
     let activo = true;
-    api<{ recibo: FelRecibo }>(`/api/fel/recibos/${reciboId}`)
+    api<{ receipt: FelReceipt }>(`/api/fel/receipts/${reciboId}`)
       .then((r) => {
-        if (activo) setRecibo(r.recibo);
+        if (activo) setRecibo(r.receipt);
       })
       .catch((err) => {
         if (activo) setError(err instanceof ApiError ? err.message : "No se pudo cargar el recibo");
@@ -342,7 +342,7 @@ export function ReciboModal({
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/fel/recibos/${recibo.id}/anular`, { method: "POST", body: { motivo } });
+      await api(`/api/fel/receipts/${recibo.id}/void`, { method: "POST", body: { reason: motivo } });
       setAnulando(false);
       await load();
       await onChanged();
@@ -358,7 +358,7 @@ export function ReciboModal({
     setBusy(true);
     setNotice(null);
     try {
-      const r = await api<{ sent: boolean }>(`/api/fel/recibos/${recibo.id}/enviar`, { method: "POST" });
+      const r = await api<{ sent: boolean }>(`/api/fel/receipts/${recibo.id}/send`, { method: "POST" });
       setNotice(r.sent ? "Correo enviado." : "No se envió: el receptor no tiene correo o el correo no está configurado.");
     } catch (err) {
       setNotice(err instanceof ApiError ? err.message : "No se pudo enviar");
@@ -367,7 +367,7 @@ export function ReciboModal({
     }
   }
 
-  const tipoLabel = recibo?.receptorTipo === "CUI" ? "CUI" : "NIT";
+  const tipoLabel = recibo?.receiverTaxIdType === "CUI" ? "CUI" : "NIT";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -376,8 +376,8 @@ export function ReciboModal({
           <div>
             <h3 className="text-lg font-bold text-brand-800">Recibo electrónico (FEL)</h3>
             {recibo && (
-              <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${FEL_ESTADO_STYLES[recibo.estado]}`}>
-                {FEL_ESTADO_LABELS[recibo.estado]}
+              <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${FEL_STATUS_STYLES[recibo.status]}`}>
+                {FEL_STATUS_LABELS[recibo.status]}
               </span>
             )}
           </div>
@@ -397,7 +397,7 @@ export function ReciboModal({
           <p className="text-gray-400">Cargando…</p>
         ) : (
           <>
-            {recibo.estado === "ERROR" && (
+            {recibo.status === "ERROR" && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
                 <p className="font-medium">La certificación falló</p>
                 <p className="mt-1 break-words text-xs">{recibo.error}</p>
@@ -416,19 +416,19 @@ export function ReciboModal({
             <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                 <dt className="text-gray-500">Autorización</dt>
-                <dd className="break-all font-medium text-gray-800">{recibo.autorizacion ?? "—"}</dd>
+                <dd className="break-all font-medium text-gray-800">{recibo.authorizationNumber ?? "—"}</dd>
                 <dt className="text-gray-500">Serie / Número</dt>
-                <dd className="text-gray-800">{recibo.serie ?? "—"} · {recibo.numero ?? "—"}</dd>
+                <dd className="text-gray-800">{recibo.series ?? "—"} · {recibo.number ?? "—"}</dd>
                 <dt className="text-gray-500">Emisión</dt>
-                <dd className="text-gray-800">{fmtFechaHora(recibo.fechaEmision)}</dd>
+                <dd className="text-gray-800">{fmtFechaHora(recibo.emittedAt)}</dd>
                 <dt className="text-gray-500">Certificación</dt>
-                <dd className="text-gray-800">{fmtFechaHora(recibo.fechaCertificacion)}</dd>
+                <dd className="text-gray-800">{fmtFechaHora(recibo.certifiedAt)}</dd>
                 <dt className="text-gray-500">Emisor</dt>
-                <dd className="text-gray-800">NIT {recibo.emisorNit} · Est. {recibo.emisorEstablecimiento}</dd>
+                <dd className="text-gray-800">NIT {recibo.issuerNit} · Est. {recibo.issuerEstablishmentCode}</dd>
                 <dt className="text-gray-500">Receptor</dt>
                 <dd className="text-gray-800">
-                  {tipoLabel} {recibo.receptorId} · {recibo.receptorNombre}
-                  {recibo.receptorCorreo && <span className="block text-xs text-gray-400">{recibo.receptorCorreo}</span>}
+                  {tipoLabel} {recibo.receiverTaxId} · {recibo.receiverName}
+                  {recibo.receiverEmail && <span className="block text-xs text-gray-400">{recibo.receiverEmail}</span>}
                 </dd>
                 <dt className="text-gray-500">Pago</dt>
                 <dd className="text-gray-800">
@@ -441,20 +441,20 @@ export function ReciboModal({
                   )}
                 </dd>
                 <dt className="text-gray-500">Total</dt>
-                <dd className="text-base font-bold text-gray-900">{formatGTQ(recibo.granTotal)}</dd>
-                {recibo.estado === "ANULADO" && (
+                <dd className="text-base font-bold text-gray-900">{formatGTQ(recibo.grandTotal)}</dd>
+                {recibo.status === "VOIDED" && (
                   <>
                     <dt className="text-gray-500">Anulado</dt>
                     <dd className="text-red-700">
-                      {fmtFechaHora(recibo.anuladoAt)}
-                      {recibo.anuladoMotivo ? ` · ${recibo.anuladoMotivo}` : ""}
-                      {recibo.anuladoBy?.name ? ` · ${recibo.anuladoBy.name}` : ""}
+                      {fmtFechaHora(recibo.voidedAt)}
+                      {recibo.voidReason ? ` · ${recibo.voidReason}` : ""}
+                      {recibo.voidedBy?.name ? ` · ${recibo.voidedBy.name}` : ""}
                     </dd>
                   </>
                 )}
               </dl>
 
-              {recibo.autorizacion && (
+              {recibo.authorizationNumber && (
                 <a
                   href={urlVerificacionSat(recibo)}
                   target="_blank"
@@ -480,10 +480,10 @@ export function ReciboModal({
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {recibo.items.map((it) => (
-                    <tr key={it.numero}>
-                      <td className="px-3 py-2 text-gray-800">{it.descripcion}</td>
-                      <td className="px-3 py-2 text-right text-gray-600">{it.cantidad}</td>
-                      <td className="px-3 py-2 text-right text-gray-600">{formatGTQ(it.precio)}</td>
+                    <tr key={it.position}>
+                      <td className="px-3 py-2 text-gray-800">{it.description}</td>
+                      <td className="px-3 py-2 text-right text-gray-600">{it.quantity}</td>
+                      <td className="px-3 py-2 text-right text-gray-600">{formatGTQ(it.unitPrice)}</td>
                       <td className="px-3 py-2 text-right font-medium text-gray-800">{formatGTQ(it.total)}</td>
                     </tr>
                   ))}
@@ -491,35 +491,25 @@ export function ReciboModal({
               </table>
             )}
 
-            {recibo.estado !== "ERROR" && (
+            {recibo.status !== "ERROR" && (
               <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
                 <a
-                  href={`${apiUrl}/api/fel/recibos/${recibo.id}/pdf`}
+                  href={`${apiUrl}/api/fel/receipts/${recibo.id}/pdf`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
                 >
                   <FileText aria-hidden className="h-3.5 w-3.5" /> PDF del recibo
                 </a>
-                {recibo.tienePdfSat && (
+                {recibo.hasXml && (
                   <a
-                    href={`${apiUrl}/api/fel/recibos/${recibo.id}/pdf?origen=sat`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    <Download aria-hidden className="h-3.5 w-3.5" /> PDF del certificador
-                  </a>
-                )}
-                {recibo.tieneXml && (
-                  <a
-                    href={`${apiUrl}/api/fel/recibos/${recibo.id}/xml`}
+                    href={`${apiUrl}/api/fel/receipts/${recibo.id}/xml`}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                   >
                     <Download aria-hidden className="h-3.5 w-3.5" /> XML
                   </a>
                 )}
-                {canEdit && recibo.estado === "CERTIFICADO" && (
+                {canEdit && recibo.status === "CERTIFIED" && (
                   <>
                     <button
                       type="button"
@@ -533,7 +523,7 @@ export function ReciboModal({
                       type="button"
                       onClick={() => setAnulando((v) => !v)}
                       disabled={busy}
-                      className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60 sm:ml-auto"
                     >
                       <Ban aria-hidden className="h-3.5 w-3.5" /> Anular ante SAT
                     </button>
