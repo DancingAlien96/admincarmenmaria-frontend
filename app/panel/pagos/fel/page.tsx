@@ -308,17 +308,19 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
   const set = <K extends keyof FelConfig>(k: K, v: FelConfig[K]) => setCfg({ ...cfg, [k]: v });
   const setIssuer = <K extends keyof FelConfig["issuer"]>(k: K, v: FelConfig["issuer"][K]) =>
     setCfg({ ...cfg, issuer: { ...cfg.issuer, [k]: v } });
-  // Garantiza exactamente un establecimiento predeterminado: si ninguno (o más
-  // de uno) está marcado, queda el primero marcado.
+  // Garantiza exactamente un establecimiento predeterminado y activo: el
+  // marcado si sigue activo; si no, el primero activo.
   const setEstablishments = (list: FelEstablishment[]) => {
-    const found = list.findIndex((e) => e.isDefault);
-    const def = found === -1 ? 0 : found;
+    let def = list.findIndex((e) => e.isDefault && e.isActive);
+    if (def === -1) def = list.findIndex((e) => e.isActive);
     set("establishments", list.map((e, j) => ({ ...e, isDefault: j === def })));
   };
   const setEst = (i: number, patch: Partial<FelEstablishment>) =>
     setEstablishments(cfg.establishments.map((e, j) => (j === i ? { ...e, ...patch } : e)));
   const setDefaultEst = (i: number) =>
     set("establishments", cfg.establishments.map((e, j) => ({ ...e, isDefault: j === i })));
+  const setPhrase = (i: number, patch: Partial<FelConfig["phrases"][number]>) =>
+    set("phrases", cfg.phrases.map((x, j) => (j === i ? { ...x, ...patch } : x)));
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -338,12 +340,6 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
 
   return (
     <form onSubmit={save} className="space-y-5">
-      {msg && (
-        <div className={`rounded-lg px-4 py-3 text-sm ${msg.ok ? "bg-emerald-50 text-emerald-800" : "border border-red-200 bg-red-50 text-red-700"}`}>
-          {msg.text}
-        </div>
-      )}
-
       <section className="rounded-xl border border-gray-200 bg-white p-5">
         <h2 className="mb-3 font-semibold text-brand-800">Emisión</h2>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -403,7 +399,7 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           <div>
             <h2 className="font-semibold text-brand-800">Establecimientos</h2>
             <p className="text-xs text-gray-500">
-              Uno por sede. El recibo usa el establecimiento de la sede del pago o del alumno; si no coincide, el marcado como predeterminado.
+              Uno por sede. El recibo usa el establecimiento activo de la sede del pago o del alumno; si no coincide, el marcado como predeterminado.
             </p>
           </div>
           <button
@@ -420,6 +416,7 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                   municipality: "",
                   department: "",
                   isDefault: cfg.establishments.length === 0,
+                  isActive: true,
                 },
               ])
             }
@@ -430,10 +427,13 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
         </div>
         <div className="space-y-3">
           {cfg.establishments.map((e, i) => (
-            <div key={e.id ?? `nuevo-${i}`} className="rounded-lg border border-gray-100 bg-gray-50/60 p-3">
+            <div
+              key={e.id ?? `nuevo-${i}`}
+              className={`rounded-lg border border-gray-100 bg-gray-50/60 p-3 ${e.isActive ? "" : "opacity-60"}`}
+            >
               <div className="grid gap-3 sm:grid-cols-6">
                 <div>
-                  <label className={labelClass}>Código SAT</label>
+                  <label className={labelClass}>Código Establecimiento</label>
                   <input className={inputClass} value={e.code} onChange={(ev) => setEst(i, { code: ev.target.value })} required />
                 </div>
                 <div className="sm:col-span-2">
@@ -470,9 +470,21 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                     type="radio"
                     name="fel-establecimiento-predeterminado"
                     checked={e.isDefault}
+                    disabled={!e.isActive}
                     onChange={() => setDefaultEst(i)}
                   />
                   Predeterminado
+                </label>
+                <label
+                  className="inline-flex cursor-pointer items-center gap-2 text-xs text-gray-700"
+                  title="Un establecimiento inactivo se conserva pero no se usa para emitir"
+                >
+                  <input
+                    type="checkbox"
+                    checked={e.isActive}
+                    onChange={(ev) => setEst(i, { isActive: ev.target.checked })}
+                  />
+                  Activo
                 </label>
                 {cfg.establishments.length > 1 && (
                   <button
@@ -494,28 +506,31 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           <div>
             <h2 className="font-semibold text-brand-800">Frases SAT</h2>
             <p className="text-xs text-gray-500">
-              Tipo 8 / escenario 2: exenta del ISR (centros educativos privados). Tipo 4 / escenario 8: exenta del IVA (cuotas de centros educativos).
+              Tipo de frase y código de escenario del catálogo de SAT. La descripción se imprime en el recibo; las inactivas se conservan pero no se envían.
             </p>
           </div>
           <button
             type="button"
-            onClick={() => set("phrases", [...cfg.phrases, { phraseType: 1, scenarioCode: 1 }])}
+            onClick={() => set("phrases", [...cfg.phrases, { phraseType: 1, scenarioCode: 1, description: "", isActive: true }])}
             className="inline-flex items-center gap-1 rounded-lg border border-brand-300 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-brand-50"
           >
             <Plus aria-hidden className="h-3.5 w-3.5" /> Agregar
           </button>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="space-y-3">
           {cfg.phrases.map((f, i) => (
-            <div key={i} className="flex items-end gap-2 rounded-lg border border-gray-100 bg-gray-50/60 p-2">
+            <div
+              key={i}
+              className={`flex flex-wrap items-end gap-3 rounded-lg border border-gray-100 bg-gray-50/60 p-3 ${f.isActive === false ? "opacity-60" : ""}`}
+            >
               <div>
                 <label className={labelClass}>Tipo</label>
                 <input
                   type="number"
                   min={1}
-                  className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-sm"
                   value={f.phraseType}
-                  onChange={(e) => set("phrases", cfg.phrases.map((x, j) => (j === i ? { ...x, phraseType: Number(e.target.value) } : x)))}
+                  onChange={(e) => setPhrase(i, { phraseType: Number(e.target.value) })}
                 />
               </div>
               <div>
@@ -523,11 +538,29 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
                 <input
                   type="number"
                   min={1}
-                  className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
+                  className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-sm"
                   value={f.scenarioCode}
-                  onChange={(e) => set("phrases", cfg.phrases.map((x, j) => (j === i ? { ...x, scenarioCode: Number(e.target.value) } : x)))}
+                  onChange={(e) => setPhrase(i, { scenarioCode: Number(e.target.value) })}
                 />
               </div>
+              <div className="min-w-[14rem] flex-1">
+                <label className={labelClass}>Descripción</label>
+                <input
+                  className={inputClass}
+                  maxLength={255}
+                  placeholder="Qué significa esta frase (ej. Exenta del IVA…)"
+                  value={f.description ?? ""}
+                  onChange={(e) => setPhrase(i, { description: e.target.value })}
+                />
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 pb-2 text-xs text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={f.isActive !== false}
+                  onChange={(e) => setPhrase(i, { isActive: e.target.checked })}
+                />
+                Activa
+              </label>
               {cfg.phrases.length > 1 && (
                 <button type="button" onClick={() => set("phrases", cfg.phrases.filter((_, j) => j !== i))} className="pb-2 text-red-600" aria-label="Quitar frase">
                   <Trash2 aria-hidden className="h-4 w-4" />
@@ -537,6 +570,12 @@ function ConfigForm({ onSaved }: { onSaved: () => void | Promise<void> }) {
           ))}
         </div>
       </section>
+
+      {msg && (
+        <div className={`rounded-lg px-4 py-3 text-sm ${msg.ok ? "bg-emerald-50 text-emerald-800" : "border border-red-200 bg-red-50 text-red-700"}`}>
+          {msg.text}
+        </div>
+      )}
 
       <div className="flex justify-end">
         <button type="submit" disabled={saving} className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">

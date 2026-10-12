@@ -680,6 +680,10 @@ export type FelStatus = "PENDING" | "CERTIFIED" | "VOIDED" | "ERROR";
 export interface FelPhrase {
   phraseType: number;
   scenarioCode: number;
+  // Qué significa la frase; es el texto que se imprime en el recibo
+  description?: string | null;
+  // Solo en la configuración: las inactivas se conservan pero no van en el recibo
+  isActive?: boolean;
 }
 
 export interface FelSummary {
@@ -775,6 +779,8 @@ export interface FelEstablishment {
   department: string;
   // Se usa cuando la sede del pago no coincide con ningún establecimiento
   isDefault: boolean;
+  // Los inactivos se conservan pero no se usan para emitir
+  isActive: boolean;
 }
 
 export interface FelConfig {
