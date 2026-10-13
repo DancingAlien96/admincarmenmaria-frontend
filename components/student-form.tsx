@@ -7,6 +7,7 @@ import { GT_DEPARTAMENTOS_LIST, municipiosDe } from "@/lib/gt-geo";
 export interface StudentFormValues {
   fullName: string;
   dpi: string;
+  taxId: string;
   birthDate: string;
   enrollmentDate: string;
   department: string;
@@ -22,6 +23,7 @@ export interface StudentFormValues {
 export const emptyStudentForm: StudentFormValues = {
   fullName: "",
   dpi: "",
+  taxId: "",
   birthDate: "",
   enrollmentDate: "",
   department: "",
@@ -115,6 +117,15 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
               value={values.dpi}
               onChange={(e) => set("dpi", e.target.value)}
               placeholder="Opcional"
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Identificación Fiscal (NIT)</label>
+            <input
+              className={inputClass}
+              value={values.taxId}
+              onChange={(e) => set("taxId", e.target.value)}
+              placeholder="Opcional · sin ella el recibo FEL sale a CF"
             />
           </div>
           <div>

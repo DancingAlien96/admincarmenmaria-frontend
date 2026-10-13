@@ -119,6 +119,8 @@ export interface PortalCuota {
   saldo: number;
   dueDate: string;
   estado: CuotaEstado;
+  // Pago aprobado con recibo electrónico certificado (para descargarlo)
+  fel?: { paymentId: string; series: string | null; number: string | null } | null;
 }
 
 export interface PortalCuotas {
@@ -187,6 +189,15 @@ export interface ChargePayment {
   status: "ACTIVO" | "EN_REVISION";
   paidAt: string;
   receiptUrl: string | null;
+  // Recibo electrónico (FEL) más reciente del pago
+  fel?: {
+    id: string;
+    status: FelStatus;
+    series: string | null;
+    number: string | null;
+    authorizationNumber: string | null;
+    error: string | null;
+  } | null;
 }
 
 export interface StudentAccount {
@@ -400,6 +411,8 @@ export interface StudentDetail {
   id: string;
   fullName: string;
   dpi: string | null;
+  // Identificación fiscal (NIT) para los recibos electrónicos (FEL); sin ella se emite a CF
+  taxId: string | null;
   birthDate: string | null;
   department: string | null;
   municipality: string | null;
@@ -652,10 +665,137 @@ export interface Payment {
   payerEmail: string | null;
   annulReason: string | null;
   annulledAt: string | null;
-  student: { id: string; fullName: string; dpi: string } | null;
+  student: { id: string; fullName: string; dpi: string | null; taxId: string | null } | null;
   feeType: { id: string; name: string; category: FeeCategory } | null;
   registeredBy: { name: string } | null;
   annulledBy: { name: string } | null;
+  // Recibo electrónico (FEL) más reciente del pago, si se emitió
+  fel: FelSummary | null;
+}
+
+// --- Recibos electrónicos (FEL · Digifact) ---
+
+export type FelStatus = "PENDING" | "CERTIFIED" | "VOIDED" | "ERROR";
+
+export interface FelPhrase {
+  phraseType: number;
+  scenarioCode: number;
+  // Qué significa la frase; es el texto que se imprime en el recibo
+  description?: string | null;
+  // Solo en la configuración: las inactivas se conservan pero no van en el recibo
+  isActive?: boolean;
+}
+
+export interface FelSummary {
+  id: string;
+  status: FelStatus;
+  documentType: string;
+  authorizationNumber: string | null;
+  series: string | null;
+  number: string | null;
+  emittedAt: string | null;
+  certifiedAt: string | null;
+  receiverTaxId: string;
+  receiverTaxIdType: "NIT" | "CUI" | "CF";
+  receiverName: string;
+  grandTotal: number;
+  error: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+  createdAt: string;
+  hasXml: boolean;
+  hasSatPdf: boolean;
+}
+
+export interface FelItem {
+  position: number;
+  itemType: "S" | "B";
+  description: string;
+  quantity: number;
+  unitOfMeasure: string;
+  unitPrice: number;
+  discount: number;
+  total: number;
+}
+
+export interface FelReceipt extends FelSummary {
+  internalUuid: string;
+  establishmentId: number | null;
+  issuerNit: string;
+  issuerName: string;
+  issuerCommercialName: string;
+  issuerTaxAffiliation: string;
+  issuerEstablishmentCode: string;
+  issuerAddress: string;
+  issuerPostalCode: string;
+  issuerMunicipality: string;
+  issuerDepartment: string;
+  issuerEmail: string | null;
+  receiverEmail: string | null;
+  receiverAddress: string | null;
+  items: FelItem[];
+  phrases: FelPhrase[];
+  currency: string;
+  updatedAt: string;
+  payment: {
+    id: string;
+    concept: string;
+    amount: number;
+    discount: number;
+    method: PaymentMethod;
+    paidAt: string;
+    status: string;
+    student: {
+      id: string;
+      fullName: string;
+      expedienteNumber: string | null;
+      taxId: string | null;
+      sede: string | null;
+    } | null;
+    registeredBy: { name: string } | null;
+  };
+  createdBy: { name: string } | null;
+  voidedBy: { name: string } | null;
+}
+
+export interface FelStatusInfo {
+  configured: boolean;
+  environment: "test" | "production" | null;
+  enabled: boolean;
+  autoIssue: boolean;
+  sendEmail: boolean;
+  issuerNit: string;
+}
+
+export interface FelEstablishment {
+  // Presente en los establecimientos ya guardados; se reenvía al guardar
+  id?: number;
+  code: string;
+  commercialName: string;
+  sede: string | null;
+  address: string;
+  postalCode: string;
+  municipality: string;
+  department: string;
+  // Se usa cuando la sede del pago no coincide con ningún establecimiento
+  isDefault: boolean;
+  // Los inactivos se conservan pero no se usan para emitir
+  isActive: boolean;
+}
+
+export interface FelConfig {
+  enabled: boolean;
+  autoIssue: boolean;
+  sendEmail: boolean;
+  issuer: {
+    nit: string;
+    name: string;
+    commercialName: string;
+    taxAffiliation: "GEN" | "PEQ" | "EXE";
+    email: string;
+  };
+  establishments: FelEstablishment[];
+  phrases: FelPhrase[];
 }
 
 export interface PaymentTotals {
