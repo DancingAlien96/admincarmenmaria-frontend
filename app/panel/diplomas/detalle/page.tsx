@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { api, apiUrl } from "@/lib/api";
+import { api, apiUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { GraduateDetail } from "@/lib/types";
@@ -13,6 +13,8 @@ import { uploadFile } from "@/lib/upload";
 function GraduateDetailInner() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? "";
+  // Desde el lápiz de la lista: abre directamente el formulario de edición
+  const editarAlAbrir = searchParams.get("editar") === "1";
   const { user } = useAuth();
   const canEdit = canAccess(user, "DIPLOMAS", "EDITOR");
 
@@ -58,7 +60,12 @@ function GraduateDetailInner() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <InfoCard graduate={graduate} />
+          <InfoCard
+            graduate={graduate}
+            canEdit={canEdit}
+            startEditing={editarAlAbrir}
+            onChange={load}
+          />
           <DiplomaCard graduate={graduate} canEdit={canEdit} onChange={load} />
           <LettersCard graduate={graduate} canEdit={canEdit} onChange={load} />
         </div>
@@ -88,17 +95,195 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
-function InfoCard({ graduate }: { graduate: GraduateDetail }) {
+const inputClass =
+  "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
+
+type GraduateForm = {
+  fullName: string;
+  dpi: string;
+  diplomaNumber: string;
+  graduationDate: string;
+  mspasCode: string;
+  email: string;
+  phone: string;
+};
+
+function formDe(g: GraduateDetail): GraduateForm {
+  return {
+    fullName: g.fullName,
+    dpi: g.dpi ?? "",
+    diplomaNumber: g.diplomaNumber,
+    graduationDate: g.graduationDate.slice(0, 10),
+    mspasCode: g.mspasCode ?? "",
+    email: g.email ?? "",
+    phone: g.phone ?? "",
+  };
+}
+
+function InfoCard({
+  graduate,
+  canEdit,
+  startEditing,
+  onChange,
+}: {
+  graduate: GraduateDetail;
+  canEdit: boolean;
+  startEditing: boolean;
+  onChange: () => Promise<void>;
+}) {
+  const [editando, setEditando] = useState(canEdit && startEditing);
+  const [form, setForm] = useState<GraduateForm>(() => formDe(graduate));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function set(k: keyof GraduateForm, v: string) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
+
+  function cancelar() {
+    setForm(formDe(graduate));
+    setError(null);
+    setEditando(false);
+  }
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await api(`/api/graduates/${graduate.id}`, {
+        method: "PATCH",
+        body: {
+          fullName: form.fullName.trim(),
+          dpi: form.dpi.trim(),
+          diplomaNumber: form.diplomaNumber.trim(),
+          graduationDate: form.graduationDate,
+          mspasCode: form.mspasCode.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+        },
+      });
+      setEditando(false);
+      await onChange();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo guardar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editando) {
+    return (
+      <section className="rounded-xl border border-brand-200 bg-white p-5">
+        <h2 className="mb-4 font-semibold text-brand-800">Editar datos del egresado</h2>
+        <form onSubmit={guardar} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm text-gray-700 sm:col-span-2">
+              Nombre completo *
+              <input
+                value={form.fullName}
+                onChange={(e) => set("fullName", e.target.value)}
+                required
+                minLength={3}
+                className={`${inputClass} mt-1`}
+              />
+            </label>
+            <label className="text-sm text-gray-700">
+              DPI
+              <input
+                value={form.dpi}
+                onChange={(e) => set("dpi", e.target.value)}
+                inputMode="numeric"
+                className={`${inputClass} mt-1`}
+              />
+            </label>
+            <label className="text-sm text-gray-700">
+              No. de diploma *
+              <input
+                value={form.diplomaNumber}
+                onChange={(e) => set("diplomaNumber", e.target.value)}
+                required
+                className={`${inputClass} mt-1`}
+              />
+            </label>
+            <label className="text-sm text-gray-700">
+              Fecha de graduación *
+              <input
+                type="date"
+                value={form.graduationDate}
+                onChange={(e) => set("graduationDate", e.target.value)}
+                required
+                className={`${inputClass} mt-1`}
+              />
+            </label>
+            <label className="text-sm text-gray-700">
+              Código MSPAS
+              <input
+                value={form.mspasCode}
+                onChange={(e) => set("mspasCode", e.target.value)}
+                className={`${inputClass} mt-1`}
+              />
+            </label>
+            <label className="text-sm text-gray-700">
+              Correo
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                className={`${inputClass} mt-1`}
+              />
+            </label>
+            <label className="text-sm text-gray-700">
+              Celular
+              <input
+                value={form.phone}
+                onChange={(e) => set("phone", e.target.value)}
+                inputMode="tel"
+                className={`${inputClass} mt-1`}
+              />
+            </label>
+          </div>
+          {error && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              {saving ? "Guardando…" : "Guardar cambios"}
+            </button>
+            <button type="button" onClick={cancelar} className="text-sm text-gray-500 hover:underline">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
-      <h2 className="mb-4 font-semibold text-brand-800">Datos del egresado</h2>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h2 className="font-semibold text-brand-800">Datos del egresado</h2>
+        {canEdit && (
+          <button
+            onClick={() => {
+              setForm(formDe(graduate));
+              setEditando(true);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            <Pencil aria-hidden className="h-4 w-4" />
+            Editar
+          </button>
+        )}
+      </div>
       <dl className="grid gap-4 sm:grid-cols-2">
         <Field label="DPI" value={graduate.dpi} />
         <Field label="No. de diploma" value={graduate.diplomaNumber} />
-        <Field
-          label="Fecha de graduación"
-          value={graduate.graduationDate.slice(0, 10)}
-        />
+        <Field label="Fecha de graduación" value={graduate.graduationDate.slice(0, 10)} />
         <Field label="Código MSPAS" value={graduate.mspasCode} />
         <Field label="Correo" value={graduate.email} />
         <Field label="Celular" value={graduate.phone} />

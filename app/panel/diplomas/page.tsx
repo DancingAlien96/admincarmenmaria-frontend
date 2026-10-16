@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -80,18 +81,19 @@ export default function GraduatesPage() {
               <th className="px-4 py-3">Graduación</th>
               <th className="px-4 py-3">MSPAS</th>
               <th className="px-4 py-3">Diploma</th>
+              {canEdit && <th className="px-4 py-3" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={canEdit ? 7 : 6} className="px-4 py-8 text-center text-gray-400">
                   Cargando…
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={canEdit ? 7 : 6} className="px-4 py-8 text-center text-gray-400">
                   No hay egresados que coincidan.
                 </td>
               </tr>
@@ -128,6 +130,18 @@ export default function GraduatesPage() {
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
+                  {canEdit && (
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/panel/diplomas/detalle?id=${g.id}&editar=1`}
+                        aria-label={`Editar ${g.fullName}`}
+                        title="Editar"
+                        className="inline-flex rounded-lg p-1.5 text-gray-400 hover:bg-brand-50 hover:text-brand-700"
+                      >
+                        <Pencil aria-hidden className="h-4 w-4" />
+                      </Link>
+                    </td>
+                  )}
                 </tr>
               ))
             )}
@@ -191,6 +205,15 @@ export default function GraduatesPage() {
                   </dd>
                 </div>
               </dl>
+              {canEdit && (
+                <Link
+                  href={`/panel/diplomas/detalle?id=${g.id}&editar=1`}
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline"
+                >
+                  <Pencil aria-hidden className="h-4 w-4" />
+                  Editar
+                </Link>
+              )}
             </div>
           ))
         )}
