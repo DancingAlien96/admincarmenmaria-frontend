@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { Guardian } from "@/lib/types";
 import { GT_DEPARTAMENTOS_LIST, municipiosDe } from "@/lib/gt-geo";
-import { tipoDeTaxId, type TaxIdTipo } from "@/lib/nit";
 import { BillingFields, billingError, billingFrom } from "@/components/billing-fields";
 
 export interface StudentFormValues {
@@ -63,9 +62,6 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [billingTipo, setBillingTipo] = useState<TaxIdTipo>(() =>
-    tipoDeTaxId(initial?.taxId)
-  );
 
   function set<K extends keyof StudentFormValues>(
     key: K,
@@ -98,7 +94,7 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const errFact = billingError(billingFrom(values), billingTipo);
+    const errFact = billingError(billingFrom(values));
     if (errFact) {
       setError(`Datos de facturación: ${errFact}`);
       return;
@@ -266,15 +262,11 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
       <section className="rounded-xl border border-gray-200 bg-white p-5">
         <h2 className="mb-1 font-semibold text-brand-800">Datos de facturación</h2>
         <p className="mb-4 text-sm text-gray-500">
-          A nombre de quién se emiten los recibos electrónicos (FEL) de este estudiante.
+          Datos de los recibos electrónicos (FEL). Sin NIT, los recibos salen a consumidor final (CF).
         </p>
         <BillingFields
           value={billingFrom(values)}
-          onChange={(b, t) => {
-            setValues((v) => ({ ...v, ...b }));
-            setBillingTipo(t);
-          }}
-          nombreAlumno={values.fullName}
+          onChange={(b) => setValues((v) => ({ ...v, ...b }))}
           inputClass={inputClass}
           labelClass={labelClass}
         />

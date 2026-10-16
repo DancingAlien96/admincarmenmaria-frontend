@@ -4,7 +4,6 @@ import { Camera, Check, KeyRound } from "lucide-react";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { BillingFields, billingError, emptyBilling, type BillingValues } from "@/components/billing-fields";
-import type { TaxIdTipo } from "@/lib/nit";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { GT_DEPARTAMENTOS_LIST, municipiosDe } from "@/lib/gt-geo";
@@ -66,7 +65,6 @@ function InscripcionInner() {
     confirm: "",
   });
   const [billing, setBilling] = useState<BillingValues>(emptyBilling);
-  const [billingTipo, setBillingTipo] = useState<TaxIdTipo>("CF");
   const [guardians, setGuardians] = useState<GuardianForm[]>([
     { name: "", relationship: "", phone: "", email: "" },
   ]);
@@ -160,7 +158,7 @@ function InscripcionInner() {
         setError("Agrega una persona responsable con nombre, parentesco y teléfono.");
         return;
       }
-      const errFact = billingError(billing, billingTipo);
+      const errFact = billingError(billing);
       if (errFact) {
         setError(`Datos de facturación: ${errFact}`);
         return;
@@ -648,19 +646,15 @@ function InscripcionInner() {
               {/* Datos de facturación (recibos FEL) */}
               <div className="rounded-lg border border-gray-200 p-3">
                 <p className={labelClass}>
-                  ¿A nombre de quién se emiten tus recibos?{" "}
+                  Datos de facturación{" "}
                   <span className="font-normal text-gray-400">(opcional)</span>
                 </p>
                 <p className="mb-3 text-xs text-gray-500">
-                  Si no lo sabes, deja consumidor final. Podrás cambiarlo después en el portal.
+                  Podrás cambiarlos después en el portal, en Facturación.
                 </p>
                 <BillingFields
                   value={billing}
-                  onChange={(b, t) => {
-                    setBilling(b);
-                    setBillingTipo(t);
-                  }}
-                  nombreAlumno={[form.primerNombre, form.primerApellido].filter(Boolean).join(" ")}
+                  onChange={setBilling}
                   inputClass={inputClass}
                   labelClass={labelClass}
                 />
