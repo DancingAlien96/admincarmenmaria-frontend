@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, CircleCheck, FileSignature, FileText, X }
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { tipoDeTaxId } from "@/lib/nit";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -44,6 +45,9 @@ function toFormValues(s: StudentDetail): StudentFormValues {
     fullName: s.fullName,
     dpi: s.dpi ?? "",
     taxId: s.taxId ?? "",
+    billingName: s.billingName ?? "",
+    billingAddress: s.billingAddress ?? "",
+    billingEmail: s.billingEmail ?? "",
     birthDate: s.birthDate ? s.birthDate.slice(0, 10) : "",
     enrollmentDate: s.enrollmentDate ? s.enrollmentDate.slice(0, 10) : "",
     department: s.department ?? "",
@@ -129,6 +133,9 @@ function StudentDetailInner() {
         fullName: values.fullName,
         dpi: values.dpi,
         taxId: values.taxId,
+        billingName: values.billingName,
+        billingAddress: values.billingAddress,
+        billingEmail: values.billingEmail,
         birthDate: values.birthDate || null,
         enrollmentDate: values.enrollmentDate || null,
         department: values.department,
@@ -298,7 +305,13 @@ function StudentDetailInner() {
             <InfoCard student={student} />
             {canPagos && (
               <CuotasCard
-                student={{ fullName: student.fullName, taxId: student.taxId, email: student.email }}
+                student={{
+                  fullName: student.fullName,
+                  taxId: student.taxId,
+                  email: student.email,
+                  billingName: student.billingName,
+                  billingEmail: student.billingEmail,
+                }}
                 studentId={id}
                 canEdit={canPagosEdit}
                 canGenerate={canPagosEdit && student.status === "ACTIVO"}
@@ -367,7 +380,13 @@ function CuotasCard({
   refreshKey,
   onGenerar,
 }: {
-  student: { fullName: string; taxId: string | null; email: string | null };
+  student: {
+    fullName: string;
+    taxId: string | null;
+    email: string | null;
+    billingName: string | null;
+    billingEmail: string | null;
+  };
   studentId: string;
   canEdit: boolean;
   canGenerate: boolean;
@@ -1735,7 +1754,16 @@ function InfoCard({ student }: { student: StudentDetail }) {
       </div>
       <dl className="grid gap-4 sm:grid-cols-2">
         <Field label="DPI" value={student.dpi} />
-        <Field label="Identificación Fiscal" value={student.taxId ?? "CF"} />
+        <Field
+          label="Facturación (recibos FEL)"
+          value={
+            student.taxId
+              ? `${tipoDeTaxId(student.taxId) === "CUI" ? "DPI" : "NIT"} ${student.taxId} · ${
+                  student.billingName || student.fullName
+                }`
+              : "Consumidor final (CF)"
+          }
+        />
         <Field
           label="Fecha de nacimiento"
           value={student.birthDate?.slice(0, 10)}

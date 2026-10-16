@@ -3,11 +3,17 @@
 import { useState } from "react";
 import type { Guardian } from "@/lib/types";
 import { GT_DEPARTAMENTOS_LIST, municipiosDe } from "@/lib/gt-geo";
+import { tipoDeTaxId, type TaxIdTipo } from "@/lib/nit";
+import { BillingFields, billingError, billingFrom } from "@/components/billing-fields";
 
 export interface StudentFormValues {
   fullName: string;
   dpi: string;
+  // Datos de facturación (recibos FEL)
   taxId: string;
+  billingName: string;
+  billingAddress: string;
+  billingEmail: string;
   birthDate: string;
   enrollmentDate: string;
   department: string;
@@ -24,6 +30,9 @@ export const emptyStudentForm: StudentFormValues = {
   fullName: "",
   dpi: "",
   taxId: "",
+  billingName: "",
+  billingAddress: "",
+  billingEmail: "",
   birthDate: "",
   enrollmentDate: "",
   department: "",
@@ -54,6 +63,9 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [billingTipo, setBillingTipo] = useState<TaxIdTipo>(() =>
+    tipoDeTaxId(initial?.taxId)
+  );
 
   function set<K extends keyof StudentFormValues>(
     key: K,
@@ -86,6 +98,11 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const errFact = billingError(billingFrom(values), billingTipo);
+    if (errFact) {
+      setError(`Datos de facturación: ${errFact}`);
+      return;
+    }
     setSaving(true);
     try {
       await onSubmit(values);
@@ -117,15 +134,6 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
               value={values.dpi}
               onChange={(e) => set("dpi", e.target.value)}
               placeholder="Opcional"
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Identificación Fiscal (NIT)</label>
-            <input
-              className={inputClass}
-              value={values.taxId}
-              onChange={(e) => set("taxId", e.target.value)}
-              placeholder="Opcional · sin ella el recibo FEL sale a CF"
             />
           </div>
           <div>
@@ -253,6 +261,23 @@ export function StudentForm({ initial, submitLabel, onSubmit }: Props) {
             />
           </div>
         </div>
+      </section>
+
+      <section className="rounded-xl border border-gray-200 bg-white p-5">
+        <h2 className="mb-1 font-semibold text-brand-800">Datos de facturación</h2>
+        <p className="mb-4 text-sm text-gray-500">
+          A nombre de quién se emiten los recibos electrónicos (FEL) de este estudiante.
+        </p>
+        <BillingFields
+          value={billingFrom(values)}
+          onChange={(b, t) => {
+            setValues((v) => ({ ...v, ...b }));
+            setBillingTipo(t);
+          }}
+          nombreAlumno={values.fullName}
+          inputClass={inputClass}
+          labelClass={labelClass}
+        />
       </section>
 
       <section className="rounded-xl border border-gray-200 bg-white p-5">

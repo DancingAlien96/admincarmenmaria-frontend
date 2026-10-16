@@ -101,7 +101,14 @@ export interface PagoParaFel {
   concept: string;
   net: number;
   status: string;
-  student?: { fullName: string; taxId?: string | null; email?: string | null } | null;
+  student?: {
+    fullName: string;
+    taxId?: string | null;
+    email?: string | null;
+    // Datos de facturación del alumno (titular del NIT/DPI)
+    billingName?: string | null;
+    billingEmail?: string | null;
+  } | null;
   payerName?: string | null;
   payerEmail?: string | null;
 }
@@ -188,10 +195,10 @@ export function EmitirReciboModal({
 }) {
   const [receptorId, setReceptorId] = useState(payment.student?.taxId ?? "CF");
   const [receptorNombre, setReceptorNombre] = useState(
-    payment.student?.fullName ?? payment.payerName ?? ""
+    payment.student?.billingName || payment.student?.fullName || payment.payerName || ""
   );
   const [receptorCorreo, setReceptorCorreo] = useState(
-    payment.student?.email ?? payment.payerEmail ?? ""
+    payment.student?.billingEmail || payment.student?.email || payment.payerEmail || ""
   );
   const [descripcion, setDescripcion] = useState(payment.concept);
   const [busy, setBusy] = useState(false);

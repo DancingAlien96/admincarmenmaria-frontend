@@ -411,8 +411,12 @@ export interface StudentDetail {
   id: string;
   fullName: string;
   dpi: string | null;
-  // Identificación fiscal (NIT) para los recibos electrónicos (FEL); sin ella se emite a CF
+  // Datos de facturación (FEL): NIT o DPI del titular (sin él se emite a CF),
+  // nombre, dirección y correo del titular (vacíos = los del estudiante)
   taxId: string | null;
+  billingName: string | null;
+  billingAddress: string | null;
+  billingEmail: string | null;
   birthDate: string | null;
   department: string | null;
   municipality: string | null;

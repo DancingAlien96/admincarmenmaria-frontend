@@ -3,6 +3,8 @@
 import { Camera, Check, KeyRound } from "lucide-react";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { BillingFields, billingError, emptyBilling, type BillingValues } from "@/components/billing-fields";
+import type { TaxIdTipo } from "@/lib/nit";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { GT_DEPARTAMENTOS_LIST, municipiosDe } from "@/lib/gt-geo";
@@ -63,6 +65,8 @@ function InscripcionInner() {
     password: "",
     confirm: "",
   });
+  const [billing, setBilling] = useState<BillingValues>(emptyBilling);
+  const [billingTipo, setBillingTipo] = useState<TaxIdTipo>("CF");
   const [guardians, setGuardians] = useState<GuardianForm[]>([
     { name: "", relationship: "", phone: "", email: "" },
   ]);
@@ -156,6 +160,11 @@ function InscripcionInner() {
         setError("Agrega una persona responsable con nombre, parentesco y teléfono.");
         return;
       }
+      const errFact = billingError(billing, billingTipo);
+      if (errFact) {
+        setError(`Datos de facturación: ${errFact}`);
+        return;
+      }
       if (!photo) {
         setError("Sube una fotografía del estudiante.");
         return;
@@ -199,6 +208,7 @@ function InscripcionInner() {
             startYear: Number(form.startYear) || undefined,
             photoUrl: photo?.url,
             photoKey: photo?.key,
+            ...billing,
             guardians: guardians
               .filter((g) => g.name.trim())
               .map((g) => ({
@@ -633,6 +643,27 @@ function InscripcionInner() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Datos de facturación (recibos FEL) */}
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className={labelClass}>
+                  ¿A nombre de quién se emiten tus recibos?{" "}
+                  <span className="font-normal text-gray-400">(opcional)</span>
+                </p>
+                <p className="mb-3 text-xs text-gray-500">
+                  Si no lo sabes, deja consumidor final. Podrás cambiarlo después en el portal.
+                </p>
+                <BillingFields
+                  value={billing}
+                  onChange={(b, t) => {
+                    setBilling(b);
+                    setBillingTipo(t);
+                  }}
+                  nombreAlumno={[form.primerNombre, form.primerApellido].filter(Boolean).join(" ")}
+                  inputClass={inputClass}
+                  labelClass={labelClass}
+                />
               </div>
             </>
           )}
