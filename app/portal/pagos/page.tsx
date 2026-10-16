@@ -14,7 +14,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { formatGTQ } from "@/lib/labels";
-import { PortalFacturacion } from "@/components/portal-facturacion";
 import type { CuotaEstado, PortalCuota, PortalCuotas } from "@/lib/types";
 
 const ESTADO_META: Record<
@@ -351,8 +350,6 @@ export default function PortalPagosPage() {
           }}
         />
       )}
-
-      <PortalFacturacion />
     </div>
   );
 }
