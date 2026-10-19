@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, CircleCheck, FileSignature, FileText, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleCheck, Download, FileSignature, FileText, Maximize2, X } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -1736,19 +1736,85 @@ function Field({ label, value }: { label: string; value?: string | null }) {
   );
 }
 
+// Foto del estudiante en grande (se cierra con la X, tocando afuera o con Esc).
+function PhotoLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Foto de ${alt}`}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/80 p-4"
+    >
+      <div className="flex w-full max-w-3xl items-center justify-between gap-3 text-white">
+        <p className="truncate text-sm font-medium">{alt}</p>
+        <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <a
+            href={src}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+            className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-sm hover:bg-white/25"
+          >
+            <Download aria-hidden className="h-4 w-4" />
+            Descargar
+          </a>
+          <button
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="rounded-lg bg-white/15 p-1.5 hover:bg-white/25"
+          >
+            <X aria-hidden className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-[80vh] max-w-full rounded-lg object-contain shadow-2xl"
+      />
+    </div>
+  );
+}
+
 function InfoCard({ student }: { student: StudentDetail }) {
+  const [ampliada, setAmpliada] = useState(false);
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5">
       <div className="mb-4 flex items-center gap-4">
         {student.photoUrl && (
-          <span className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+          <button
+            type="button"
+            onClick={() => setAmpliada(true)}
+            title="Ver foto en grande"
+            aria-label={`Ver foto de ${student.fullName} en grande`}
+            className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-400"
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={student.photoUrl}
               alt={student.fullName}
               className="h-full w-full object-cover"
             />
-          </span>
+            <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <Maximize2 aria-hidden className="h-5 w-5" />
+            </span>
+          </button>
+        )}
+        {ampliada && student.photoUrl && (
+          <PhotoLightbox
+            src={student.photoUrl}
+            alt={student.fullName}
+            onClose={() => setAmpliada(false)}
+          />
         )}
         <h2 className="font-semibold text-brand-800">Datos personales</h2>
       </div>
