@@ -409,7 +409,11 @@ function RegistrarPagoModal({
         body: fd,
         credentials: "include",
       });
-      if (!up.ok) throw new Error("No se pudo subir el archivo");
+      if (!up.ok) {
+        // Muestra el motivo real (tipo no permitido, archivo muy grande, etc.)
+        const j = await up.json().catch(() => null);
+        throw new Error(j?.error ?? "No se pudo subir el archivo");
+      }
       const stored = (await up.json()) as { url: string; key: string };
       await api(`/api/portal/cuotas/${cuota.id}/boleta`, {
         method: "POST",
