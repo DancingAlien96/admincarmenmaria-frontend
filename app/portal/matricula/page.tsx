@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
 import type { MatriculaInfo } from "@/lib/types";
+import { showAlert } from "@/lib/dialog";
 
 const ESTADO = {
   EN_REVISION: {
@@ -62,7 +63,7 @@ export default function MatriculaPage() {
   async function subir(file: File | undefined) {
     if (!file) return;
     if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
-      alert("Sube tu matrícula firmada en formato PDF.");
+      void showAlert("Sube tu matrícula firmada en formato PDF.");
       return;
     }
     setSubiendo(true);
@@ -74,7 +75,7 @@ export default function MatriculaPage() {
       });
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo subir tu matrícula");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo subir tu matrícula");
     } finally {
       setSubiendo(false);
       if (fileRef.current) fileRef.current.value = "";

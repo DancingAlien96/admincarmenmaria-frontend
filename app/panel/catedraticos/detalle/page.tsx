@@ -9,6 +9,7 @@ import { uploadFile } from "@/lib/upload";
 import { TEACHER_DOC_LABELS, TEACHER_ROLE_LABELS } from "@/lib/labels";
 import type { TeacherDetail, TeacherDocType } from "@/lib/types";
 import { TeacherForm, type TeacherFormValues } from "@/components/teacher-form";
+import { showConfirm } from "@/lib/dialog";
 
 const DOC_TYPES = Object.keys(TEACHER_DOC_LABELS) as TeacherDocType[];
 
@@ -59,7 +60,7 @@ function TeacherDetailInner() {
   }
 
   async function deactivate() {
-    if (!confirm("¿Desactivar este catedrático?")) return;
+    if (!await showConfirm("¿Desactivar este catedrático?")) return;
     await api(`/api/teachers/${id}`, { method: "DELETE" });
     router.replace("/panel/catedraticos");
   }

@@ -13,6 +13,7 @@ import type {
   StudentListItem,
   StudentStatus,
 } from "@/lib/types";
+import { showAlert } from "@/lib/dialog";
 
 const STATUSES: (StudentStatus | "")[] = [
   "",
@@ -114,7 +115,7 @@ export default function StudentsPage() {
       );
       setInsOpen(r.inscripcionesAbiertas);
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo cambiar el estado.");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo cambiar el estado.");
     }
   }
 
@@ -128,7 +129,7 @@ export default function StudentsPage() {
       });
       setInviteLink(`${window.location.origin}/inscripcion/?t=${r.token}`);
     } catch (err) {
-      alert(
+      void showAlert(
         err instanceof ApiError ? err.message : "No se pudo generar el link."
       );
     } finally {

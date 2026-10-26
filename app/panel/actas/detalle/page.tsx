@@ -9,6 +9,7 @@ import { api, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { ActaDetail } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 function DetailInner() {
   const id = useSearchParams().get("id") ?? "";
@@ -33,7 +34,7 @@ function DetailInner() {
   }, [load]);
 
   async function remove() {
-    if (!confirm("¿Eliminar esta acta?")) return;
+    if (!await showConfirm("¿Eliminar esta acta?")) return;
     await api(`/api/actas/${id}`, { method: "DELETE" });
     router.replace("/panel/actas");
   }

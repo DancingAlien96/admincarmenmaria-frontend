@@ -6,6 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { AvisoEnviado } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 type Audience = "students" | "teachers" | "custom";
 
@@ -138,7 +139,7 @@ function NuevoAviso({ opciones, onSent }: { opciones: Opciones; onSent: () => Pr
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
-    if (!confirm(`Se enviará el aviso ${destinoTexto()}. ¿Continuar?`)) return;
+    if (!await showConfirm(`Se enviará el aviso ${destinoTexto()}. ¿Continuar?`)) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -436,7 +437,7 @@ function Historial({
   onChange: () => Promise<void>;
 }) {
   async function eliminar(a: AvisoEnviado) {
-    if (!confirm(`¿Eliminar "${a.titulo}"? Dejará de verse en el portal de los destinatarios.`)) return;
+    if (!await showConfirm(`¿Eliminar "${a.titulo}"? Dejará de verse en el portal de los destinatarios.`)) return;
     await api(`/api/avisos/${a.id}`, { method: "DELETE" });
     await onChange();
   }

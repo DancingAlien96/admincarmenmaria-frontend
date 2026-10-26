@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { PwaSupport } from "@/components/pwa";
+import { DialogHost } from "@/lib/dialog";
 
 export const metadata: Metadata = {
   title: "Sistema Administrativo · Carmen María",
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <AuthProvider>{children}</AuthProvider>
         <PwaSupport />
+        <DialogHost />
       </body>
     </html>
   );

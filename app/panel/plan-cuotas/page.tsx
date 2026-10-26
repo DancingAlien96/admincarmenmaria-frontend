@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { formatGTQ } from "@/lib/labels";
 import type { CuotaPlanItem } from "@/lib/types";
+import { showAlert, showConfirm } from "@/lib/dialog";
 
 export default function PlanCuotasPage() {
   const [items, setItems] = useState<CuotaPlanItem[] | null>(null);
@@ -58,7 +59,7 @@ export default function PlanCuotasPage() {
       setMonthOffset("");
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo agregar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo agregar");
     } finally {
       setBusy(false);
     }
@@ -84,7 +85,7 @@ export default function PlanCuotasPage() {
         });
       }
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     }
   }
 
@@ -96,7 +97,7 @@ export default function PlanCuotasPage() {
       });
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo cambiar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo cambiar");
     }
   }
 
@@ -574,7 +575,7 @@ function ApplyCohort() {
 
   async function aplicar() {
     if (
-      !confirm(
+      !await showConfirm(
         `Se aplicará el plan general a todos los estudiantes activos inscritos en ${year} que aún no tengan cuotas. ¿Continuar?`
       )
     )

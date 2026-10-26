@@ -6,6 +6,7 @@ import { api, apiUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { ActaListItem, Pagination } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 export default function ActasPage() {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ export default function ActasPage() {
   }, [load]);
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar esta acta?")) return;
+    if (!await showConfirm("¿Eliminar esta acta?")) return;
     await api(`/api/actas/${id}`, { method: "DELETE" });
     await load();
   }

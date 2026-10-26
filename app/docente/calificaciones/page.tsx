@@ -9,6 +9,7 @@ import {
   type StudentFases,
   type FaseContentItem,
 } from "@/lib/types";
+import { showAlert } from "@/lib/dialog";
 
 interface DocenteStudent {
   id: string;
@@ -182,7 +183,7 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
       setDate("");
       await reload();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }
@@ -193,7 +194,7 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
       await api(`/api/grades/${id}`, { method: "DELETE" });
       await reload();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo eliminar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo eliminar");
     }
   }
 

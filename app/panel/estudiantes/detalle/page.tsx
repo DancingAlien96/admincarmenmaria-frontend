@@ -36,6 +36,7 @@ import {
 } from "@/components/student-form";
 import { FelAcciones } from "@/components/fel-recibo";
 import { uploadFile } from "@/lib/upload";
+import { showAlert, showConfirm } from "@/lib/dialog";
 
 const STATUSES: StudentStatus[] = ["ACTIVO", "EGRESADO", "BAJA"];
 const DOC_TYPES = Object.keys(DOC_TYPE_LABELS) as DocumentType[];
@@ -97,7 +98,7 @@ function StudentDetailInner() {
       setPortalCreds(r);
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo crear el acceso");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo crear el acceso");
     } finally {
       setPortalBusy(false);
     }
@@ -614,14 +615,14 @@ function MoverPlan({
         `/api/charges/student/${studentId}/reschedule`,
         { method: "POST", body: { startMonth: month } }
       );
-      alert(
+      void showAlert(
         r.delta === 0
           ? "El plan ya inicia en ese mes; no se movió nada."
           : `Se movieron ${r.moved} cuota(s) pendiente(s) ${Math.abs(r.delta)} mes(es) ${r.delta > 0 ? "hacia adelante" : "hacia atrás"}.`
       );
       await onDone();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo mover el plan");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo mover el plan");
     } finally {
       setBusy(false);
     }
@@ -679,7 +680,7 @@ function BoletaRevision({
       });
       await onDone();
     } catch (err) {
-      alert(
+      void showAlert(
         err instanceof ApiError
           ? err.message
           : action === "approve"
@@ -813,18 +814,18 @@ function AdmisionCard({
         }
       );
       if (r.planError) {
-        alert(`Admitido, pero no se pudo aplicar el plan: ${r.planError}`);
+        void showAlert(`Admitido, pero no se pudo aplicar el plan: ${r.planError}`);
       }
       await onChange();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }
   }
 
   async function reabrir() {
-    if (!confirm("¿Abrir un nuevo intento de admisión? Se generará otro cobro del examen."))
+    if (!await showConfirm("¿Abrir un nuevo intento de admisión? Se generará otro cobro del examen."))
       return;
     setBusy(true);
     try {
@@ -833,7 +834,7 @@ function AdmisionCard({
       });
       await onChange();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo reabrir");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo reabrir");
     } finally {
       setBusy(false);
     }
@@ -1006,7 +1007,7 @@ function RegistrarPagoInline({
       });
       await onDone();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo registrar el pago");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo registrar el pago");
     } finally {
       setBusy(false);
     }
@@ -1117,7 +1118,7 @@ function FasesCard({
       setDate("");
       await reload();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }
@@ -1128,7 +1129,7 @@ function FasesCard({
       await api(`/api/grades/${id}`, { method: "DELETE" });
       await reload();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo eliminar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo eliminar");
     }
   }
 
@@ -1331,7 +1332,7 @@ function MatriculaCard({
       setMotivo("");
       await reload();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }
@@ -1486,7 +1487,7 @@ function ChecklistCard({
       );
       setData(r);
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setSavingId(null);
     }
@@ -1625,7 +1626,7 @@ function CuotaPlanModal({
         `/api/charges/student/${studentId}/plan`,
         { method: "POST", body: { startMonth } }
       );
-      alert(`Plan aplicado: ${r.created} cuota(s) creadas.`);
+      void showAlert(`Plan aplicado: ${r.created} cuota(s) creadas.`);
       onDone();
     } catch (err) {
       setError(

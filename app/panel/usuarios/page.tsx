@@ -10,6 +10,7 @@ import type {
   Permission,
   PermissionLevel,
 } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 const SECTIONS = Object.keys(SECTION_LABELS) as ModuleSection[];
 
@@ -34,7 +35,7 @@ export default function UsersPage() {
   }, [load]);
 
   async function deactivate(id: string) {
-    if (!confirm("¿Desactivar este usuario?")) return;
+    if (!await showConfirm("¿Desactivar este usuario?")) return;
     await api(`/api/users/${id}`, { method: "DELETE" });
     await load();
   }

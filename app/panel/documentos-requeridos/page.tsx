@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { FileSignature, FileText } from "lucide-react";
 import { uploadFile } from "@/lib/upload";
 import type { DocRequirement } from "@/lib/types";
+import { showAlert, showConfirm } from "@/lib/dialog";
 
 export default function DocumentosRequeridosPage() {
   const [reqs, setReqs] = useState<DocRequirement[] | null>(null);
@@ -37,7 +38,7 @@ export default function DocumentosRequeridosPage() {
       setNuevo("");
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo agregar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo agregar");
     } finally {
       setBusy(false);
     }
@@ -52,7 +53,7 @@ export default function DocumentosRequeridosPage() {
       setEditing(null);
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     }
   }
 
@@ -64,7 +65,7 @@ export default function DocumentosRequeridosPage() {
       });
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo cambiar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo cambiar");
     }
   }
 
@@ -182,7 +183,7 @@ function MatriculaTemplateCard() {
   async function subir(file: File | undefined) {
     if (!file) return;
     if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
-      alert("El formulario debe ser un PDF.");
+      void showAlert("El formulario debe ser un PDF.");
       return;
     }
     setBusy(true);
@@ -194,14 +195,14 @@ function MatriculaTemplateCard() {
       });
       setTpl(r.template);
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo subir");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo subir");
     } finally {
       setBusy(false);
     }
   }
 
   async function quitar() {
-    if (!confirm("¿Quitar el formulario de matrícula? Los alumnos ya no podrán descargarlo.")) return;
+    if (!await showConfirm("¿Quitar el formulario de matrícula? Los alumnos ya no podrán descargarlo.")) return;
     await api("/api/matricula/template", { method: "DELETE" });
     setTpl(null);
   }

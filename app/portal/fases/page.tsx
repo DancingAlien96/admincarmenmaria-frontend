@@ -29,6 +29,7 @@ import {
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { FaseContentItem, FaseItem, StudentFases } from "@/lib/types";
+import { showAlert } from "@/lib/dialog";
 
 // Nota mínima por defecto si el servidor no la envía
 const APROBACION_DEFAULT = 70;
@@ -696,7 +697,7 @@ function Reto({ fase, onAprobado }: { fase: FaseItem; onAprobado: () => void }) 
       );
       if (r.passed) onAprobado();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo enviar el reto");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo enviar el reto");
     } finally {
       setBusy(false);
     }
@@ -902,7 +903,7 @@ function Encuesta({ fase }: { fase: FaseItem }) {
       });
     } catch {
       setData((d) => (d ? { ...d, ratings: antes } : d));
-      alert("No se pudo guardar tu calificación. Intenta de nuevo.");
+      void showAlert("No se pudo guardar tu calificación. Intenta de nuevo.");
     }
   }
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
 import { EBOOK_CATEGORIES, type Ebook } from "@/lib/types";
+import { showAlert, showConfirm } from "@/lib/dialog";
 
 function sizeLabel(bytes: number): string {
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
@@ -37,7 +38,7 @@ export default function EbooksAdminPage() {
   async function agregar(e: React.FormEvent) {
     e.preventDefault();
     if (!file) {
-      alert("Sube el archivo del material (PDF).");
+      void showAlert("Sube el archivo del material (PDF).");
       return;
     }
     setBusy(true);
@@ -75,7 +76,7 @@ export default function EbooksAdminPage() {
       if (coverRef.current) coverRef.current.value = "";
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo agregar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo agregar");
     } finally {
       setBusy(false);
     }
@@ -89,17 +90,17 @@ export default function EbooksAdminPage() {
       });
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo cambiar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo cambiar");
     }
   }
 
   async function eliminar(id: string) {
-    if (!confirm("¿Eliminar este material? Se borra también su archivo.")) return;
+    if (!await showConfirm("¿Eliminar este material? Se borra también su archivo.")) return;
     try {
       await api(`/api/ebooks/${id}`, { method: "DELETE" });
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo eliminar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo eliminar");
     }
   }
 
@@ -348,7 +349,7 @@ function EditEbookModal({
       });
       await onSaved();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }

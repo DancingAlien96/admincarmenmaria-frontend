@@ -6,6 +6,7 @@ import Link from "next/link";
 import { api, apiUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import type { Signatory } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
@@ -90,7 +91,7 @@ export default function FirmasPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Dar de baja esta firma? Las actas ya emitidas no se afectan."))
+    if (!await showConfirm("¿Dar de baja esta firma? Las actas ya emitidas no se afectan."))
       return;
     try {
       await api(`/api/signatories/${id}`, { method: "DELETE" });

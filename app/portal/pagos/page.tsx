@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { api, ApiError, apiUrl } from "@/lib/api";
 import { formatGTQ } from "@/lib/labels";
 import type { CuotaEstado, PortalCuota, PortalCuotas } from "@/lib/types";
+import { showAlert } from "@/lib/dialog";
 
 const ESTADO_META: Record<
   CuotaEstado,
@@ -113,7 +114,7 @@ export default function PortalPagosPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "No se pudo descargar");
+      void showAlert(err instanceof Error ? err.message : "No se pudo descargar");
     } finally {
       setDescargando(null);
     }

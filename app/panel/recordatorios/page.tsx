@@ -11,6 +11,7 @@ import type {
   Pagination,
   WhatsappMessage,
 } from "@/lib/types";
+import { showAlert, showConfirm } from "@/lib/dialog";
 
 const KIND_LABELS: Record<string, string> = {
   bot: "Bot (IA)",
@@ -140,7 +141,7 @@ function EmailDesignCard() {
       const up = await uploadFile(file);
       set({ bannerKey: up.key, bannerUrl: up.url });
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo subir la imagen");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo subir la imagen");
     } finally {
       setUploading(false);
     }
@@ -396,7 +397,7 @@ function BulkEmailCard() {
     if (!list || list.length === 0) return;
     const incoming = Array.from(list);
     if (files.length + incoming.length > MAX_FILES) {
-      alert(`Máximo ${MAX_FILES} archivos adjuntos.`);
+      void showAlert(`Máximo ${MAX_FILES} archivos adjuntos.`);
       return;
     }
     setUploading(true);
@@ -405,12 +406,12 @@ function BulkEmailCard() {
       for (const f of incoming) uploaded.push(await uploadFile(f));
       const next = [...files, ...uploaded];
       if (next.reduce((s, f) => s + f.size, 0) > MAX_TOTAL_MB * 1024 * 1024) {
-        alert(`Los adjuntos no pueden pasar de ${MAX_TOTAL_MB} MB en total.`);
+        void showAlert(`Los adjuntos no pueden pasar de ${MAX_TOTAL_MB} MB en total.`);
         return;
       }
       setFiles(next);
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo subir el archivo");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo subir el archivo");
     } finally {
       setUploading(false);
     }
@@ -428,7 +429,7 @@ function BulkEmailCard() {
   }
 
   async function enviar() {
-    if (!confirm(`Se enviará el correo ${destinoTexto()}. ¿Continuar?`)) return;
+    if (!await showConfirm(`Se enviará el correo ${destinoTexto()}. ¿Continuar?`)) return;
     setBusy(true);
     setMsg(null);
     try {
@@ -959,7 +960,7 @@ function BulkSendCard() {
       return;
     }
     if (
-      !confirm(
+      !await showConfirm(
         "Se enviará la plantilla a TODOS los estudiantes activos con teléfono. ¿Continuar?"
       )
     )

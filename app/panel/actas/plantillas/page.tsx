@@ -7,6 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { ActaSigner, ActaTemplate } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
@@ -100,7 +101,7 @@ export default function TemplatesPage() {
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar esta plantilla?")) return;
+    if (!await showConfirm("¿Eliminar esta plantilla?")) return;
     await api(`/api/actas/templates/${id}`, { method: "DELETE" });
     await load();
   }

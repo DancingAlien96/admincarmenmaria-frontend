@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
 import { type FaseContentItem, type FaseItemKind } from "@/lib/types";
+import { showAlert, showConfirm } from "@/lib/dialog";
 
 const FASES = [
   { fase: 1, nombre: "Fase I", subtitulo: "Fundamentos Básicos" },
@@ -47,12 +48,12 @@ export function FasesManager({
   }, [load]);
 
   const delItem = async (id: string) => {
-    if (!confirm("¿Eliminar este elemento?")) return;
+    if (!await showConfirm("¿Eliminar este elemento?")) return;
     try {
       await api(`/api/fase-content/${id}`, { method: "DELETE" });
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo eliminar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo eliminar");
     }
   };
 
@@ -178,7 +179,7 @@ function SeccionCard({
     e.preventDefault();
     // Al editar un material, el archivo nuevo es opcional (se conserva el actual)
     if (esMaterial && !file && !editId) {
-      alert("Sube el archivo del material.");
+      void showAlert("Sube el archivo del material.");
       return;
     }
     setBusy(true);
@@ -213,7 +214,7 @@ function SeccionCard({
       limpiar();
       onChange();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }
@@ -436,7 +437,7 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
       cerrarForm();
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar la pregunta");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar la pregunta");
     } finally {
       setBusy(false);
     }
@@ -460,7 +461,7 @@ function RetoManager({ fase, readOnly }: { fase: number; readOnly: boolean }) {
   }
 
   async function borrar(id: string) {
-    if (!confirm("¿Eliminar esta pregunta del reto?")) return;
+    if (!await showConfirm("¿Eliminar esta pregunta del reto?")) return;
     await api(`/api/fase-extras/quiz/${id}`, { method: "DELETE" });
     await load();
   }
@@ -664,14 +665,14 @@ function EncuestaManager({ fase, readOnly }: { fase: number; readOnly: boolean }
       setForm(null);
       await load();
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }
   }
 
   async function quitar(c: CriterioEncuesta) {
-    if (!confirm(`¿Quitar "${c.nombre}" de la encuesta? Las respuestas anteriores se conservan.`)) return;
+    if (!await showConfirm(`¿Quitar "${c.nombre}" de la encuesta? Las respuestas anteriores se conservan.`)) return;
     await api(`/api/fase-extras/encuesta/criterios/${c.id}`, { method: "DELETE" });
     await load();
   }
@@ -887,7 +888,7 @@ function Criterios({ readOnly }: { readOnly: boolean }) {
       });
       setGuardado(c);
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "No se pudo guardar");
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo guardar");
     } finally {
       setBusy(false);
     }

@@ -7,6 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess } from "@/lib/labels";
 import type { DuplicateGroup, DuplicateStudent } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 export default function DuplicatesPage() {
   const { user } = useAuth();
@@ -46,7 +47,7 @@ export default function DuplicatesPage() {
     const dups = g.students.filter((s) => s.id !== keepId);
     const keep = g.students.find((s) => s.id === keepId)!;
     if (
-      !confirm(
+      !await showConfirm(
         `Se fusionarán ${dups.length} expediente(s) en "${keep.fullName}". ` +
           `Sus pagos, documentos y cargos se moverán al expediente conservado y ` +
           `los duplicados se eliminarán. ¿Continuar?`

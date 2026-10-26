@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { canAccess, EXPENSE_CATEGORY_LABELS, formatGTQ } from "@/lib/labels";
 import type { Expense, ExpenseCategory } from "@/lib/types";
+import { showConfirm } from "@/lib/dialog";
 
 const CATEGORIES = Object.keys(EXPENSE_CATEGORY_LABELS) as ExpenseCategory[];
 
@@ -50,7 +51,7 @@ export function ExpensesPanel({ from, to, onChanged }: Props) {
   }
 
   async function remove(id: string) {
-    if (!confirm("¿Eliminar este egreso?")) return;
+    if (!await showConfirm("¿Eliminar este egreso?")) return;
     await api(`/api/expenses/${id}`, { method: "DELETE" });
     await refreshAll();
   }

@@ -21,6 +21,7 @@ import type {
 } from "@/lib/types";
 import { RegisterPaymentForm } from "@/components/register-payment-form";
 import { FelAcciones, useFelStatus } from "@/components/fel-recibo";
+import { showPrompt } from "@/lib/dialog";
 
 // Años para filtrar (del actual hacia atrás)
 const CURRENT_YEAR = new Date().getFullYear();
@@ -105,7 +106,13 @@ export default function PaymentsPage() {
   }
 
   async function annul(p: Payment) {
-    const reason = prompt(`Motivo de anulación para "${p.concept}":`);
+    const reason = await showPrompt(`Escribe el motivo de anulación de "${p.concept}".`, {
+      titulo: "Anular pago",
+      placeholder: "Ej. pago duplicado",
+      aceptar: "Anular pago",
+      tono: "peligro",
+      requerido: true,
+    });
     if (!reason) return;
     await api(`/api/payments/${p.id}/annul`, {
       method: "POST",
