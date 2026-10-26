@@ -233,6 +233,15 @@ function StudentDetailInner() {
             La contraseña no se puede consultar (se guarda cifrada). Si el
             estudiante la olvidó, usa “Restablecer contraseña”.
           </p>
+          {student.email &&
+            student.portalUser.email.toLowerCase() !== student.email.toLowerCase() && (
+              <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                El usuario de acceso no coincide con el correo del expediente (
+                {student.email}). Usa “Restablecer contraseña” para corregirlo: el
+                estudiante podrá entrar con el correo del expediente y le llegarán
+                sus datos de acceso.
+              </p>
+            )}
         </div>
       )}
 

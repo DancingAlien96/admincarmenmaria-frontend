@@ -7,7 +7,7 @@ import {
   FileSignature,
   CircleDollarSign,
   Folder,
-  KeyRound,
+  UserRound,
   LayoutDashboard,
   Layers,
   ReceiptText,
@@ -99,7 +99,7 @@ export default function PortalLayout({
         homeHref="/portal"
         brandSubtitle="Portal del Estudiante"
         groups={[{ items: nav }]}
-        footerLinks={[{ href: "/portal/cuenta", label: "Cambiar contraseña", icon: KeyRound }]}
+        footerLinks={[{ href: "/portal/perfil", label: "Mi perfil", icon: UserRound }]}
         user={{
           name: s?.fullName ?? user.name,
           subtitle: s?.expedienteNumber ? `Exp. ${s.expedienteNumber}` : "Estudiante",
