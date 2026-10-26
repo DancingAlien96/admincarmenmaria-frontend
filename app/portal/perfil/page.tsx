@@ -4,7 +4,6 @@ import { KeyRound, Mail, Phone, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { usePortalMe } from "@/components/portal-context";
-import { useAuth } from "@/lib/auth-context";
 
 interface Cuenta {
   email: string;
@@ -63,7 +62,6 @@ function Tarjeta({
 
 export default function PortalPerfilPage() {
   const { me } = usePortalMe();
-  const { refresh } = useAuth();
   const [cuenta, setCuenta] = useState<Cuenta | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,13 +107,7 @@ export default function PortalPerfilPage() {
       </section>
 
       <ContactoForm cuenta={cuenta} onSaved={setCuenta} />
-      <CorreoForm
-        cuenta={cuenta}
-        onSaved={async (c) => {
-          setCuenta(c);
-          await refresh();
-        }}
-      />
+      <CorreoForm cuenta={cuenta} />
       <PasswordForm />
     </div>
   );
@@ -187,13 +179,7 @@ function ContactoForm({ cuenta, onSaved }: { cuenta: Cuenta; onSaved: (c: Cuenta
   );
 }
 
-function CorreoForm({
-  cuenta,
-  onSaved,
-}: {
-  cuenta: Cuenta;
-  onSaved: (c: Cuenta) => Promise<void>;
-}) {
+function CorreoForm({ cuenta }: { cuenta: Cuenta }) {
   const [email, setEmail] = useState(cuenta.email);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -205,13 +191,15 @@ function CorreoForm({
     setBusy(true);
     setMsg(null);
     try {
-      const r = await api<{ cuenta: Cuenta }>("/api/portal/cuenta/correo", {
+      const r = await api<{ pendiente: string }>("/api/portal/cuenta/correo", {
         method: "PUT",
         body: { email: email.trim(), password },
       });
-      await onSaved(r.cuenta);
       setPassword("");
-      setMsg({ ok: true, text: `Listo. Desde ahora inicias sesión con ${r.cuenta.email}.` });
+      setMsg({
+        ok: true,
+        text: `Te enviamos un enlace a ${r.pendiente}. Ábrelo para confirmar el cambio (vence en 24 horas). Mientras tanto sigues entrando con ${cuenta.email}.`,
+      });
     } catch (err) {
       setMsg({ ok: false, text: err instanceof ApiError ? err.message : "No se pudo cambiar el correo" });
     } finally {
@@ -257,7 +245,7 @@ function CorreoForm({
           disabled={busy || !cambio}
           className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
         >
-          {busy ? "Guardando…" : "Cambiar correo"}
+          {busy ? "Enviando…" : "Cambiar correo"}
         </button>
       </form>
     </Tarjeta>
