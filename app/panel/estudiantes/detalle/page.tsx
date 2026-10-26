@@ -3,7 +3,7 @@
 import { ArrowLeft, ArrowRight, Check, CircleCheck, Download, FileSignature, FileText, Maximize2, X } from "lucide-react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { tipoDeTaxId } from "@/lib/nit";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -36,7 +36,7 @@ import {
 } from "@/components/student-form";
 import { FelAcciones } from "@/components/fel-recibo";
 import { uploadFile } from "@/lib/upload";
-import { showAlert, showConfirm } from "@/lib/dialog";
+import { showAlert, showConfirm, showPrompt } from "@/lib/dialog";
 
 const STATUSES: StudentStatus[] = ["ACTIVO", "EGRESADO", "BAJA"];
 const DOC_TYPES = Object.keys(DOC_TYPE_LABELS) as DocumentType[];
@@ -69,6 +69,7 @@ function toFormValues(s: StudentDetail): StudentFormValues {
 
 function StudentDetailInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const canEdit = canAccess(user, "STUDENTS", "EDITOR");
@@ -86,6 +87,40 @@ function StudentDetailInner() {
   const [portalBusy, setPortalBusy] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
   const [pagosRefresh, setPagosRefresh] = useState(0);
+
+  // Elimina el expediente completo (irreversible). Pide escribir ELIMINAR.
+  async function eliminarExpediente() {
+    if (!student) return;
+    const texto = await showPrompt(
+      `Se eliminará el expediente de ${student.fullName} con su cuenta de acceso, cuotas, documentos, notas, matrícula, foto y boletas pendientes. NO se puede deshacer.\n\n` +
+        "Los pagos aprobados se conservan sin vincular (se pueden vincular al expediente nuevo con “Vincular pagos”).\n\n" +
+        "Para confirmar escribe ELIMINAR:",
+      { titulo: "Eliminar expediente", aceptar: "Eliminar expediente", tono: "peligro", requerido: true, placeholder: "ELIMINAR" }
+    );
+    if (texto === null) return;
+    if (texto.trim().toUpperCase() !== "ELIMINAR") {
+      void showAlert("No se eliminó: debes escribir ELIMINAR para confirmar.");
+      return;
+    }
+    setPortalBusy(true);
+    try {
+      const r = await api<{ nombre: string; pagosConservados: number }>(`/api/students/${id}`, {
+        method: "DELETE",
+      });
+      await showAlert(
+        `Se eliminó el expediente de ${r.nombre}. La persona ya puede inscribirse de nuevo con un link de inscripción.` +
+          (r.pagosConservados > 0
+            ? `\n\n${r.pagosConservados} pago(s) aprobado(s) quedaron sin vincular en Control de Pagos.`
+            : ""),
+        { tono: "exito", titulo: "Expediente eliminado" }
+      );
+      router.push("/panel/estudiantes");
+    } catch (err) {
+      void showAlert(err instanceof ApiError ? err.message : "No se pudo eliminar el expediente");
+    } finally {
+      setPortalBusy(false);
+    }
+  }
 
   async function crearAccesoPortal() {
     setPortalBusy(true);
@@ -202,6 +237,15 @@ function StudentDetailInner() {
             >
               Editar datos
             </button>
+            {user?.role === "ADMIN" && (
+              <button
+                onClick={() => void eliminarExpediente()}
+                disabled={portalBusy}
+                className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+              >
+                Eliminar expediente
+              </button>
+            )}
           </div>
         )}
       </div>
