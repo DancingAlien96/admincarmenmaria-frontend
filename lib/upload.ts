@@ -9,11 +9,16 @@ export interface UploadedFile {
 
 // Sube un archivo al backend (multipart). El backend optimiza imagenes
 // y devuelve { url, key }. La cookie de sesion va con credentials:include.
-export async function uploadFile(file: File): Promise<UploadedFile> {
+// tipo "material": materiales de clase (acepta Word, Excel, ZIP, video...).
+export async function uploadFile(
+  file: File,
+  opciones: { tipo?: "material" } = {}
+): Promise<UploadedFile> {
   const form = new FormData();
   form.append("file", file);
 
-  const res = await fetch(`${apiUrl}/api/uploads`, {
+  const qs = opciones.tipo ? `?tipo=${opciones.tipo}` : "";
+  const res = await fetch(`${apiUrl}/api/uploads${qs}`, {
     method: "POST",
     body: form,
     credentials: "include",

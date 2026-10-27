@@ -188,7 +188,7 @@ function SeccionCard({
       let fileKey: string | undefined;
       let size: string | undefined;
       if (esMaterial && file) {
-        const up = await uploadFile(file);
+        const up = await uploadFile(file, { tipo: "material" });
         fileUrl = up.url;
         fileKey = up.key;
         size = sizeLabel(up.size);
@@ -351,7 +351,6 @@ function SeccionCard({
               <input
                 ref={fileRef}
                 type="file"
-                accept="application/pdf,image/*,.ppt,.pptx,.doc,.docx,.xls,.xlsx"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="text-sm"
               />
