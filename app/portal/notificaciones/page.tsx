@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { AvisosList } from "@/components/avisos-list";
 import { PushToggle } from "@/components/push-toggle";
+import { TelegramConnect } from "@/components/telegram-connect";
 import { usePortalMe } from "@/components/portal-context";
 import type { PortalNotif, PortalNotifs } from "@/lib/types";
 
@@ -70,8 +71,9 @@ export default function PortalNotificacionesPage() {
         Avisos de la escuela y pendientes de tus cuotas y documentos.
       </p>
 
-      <div id="activar" className="mb-6 scroll-mt-20">
+      <div id="activar" className="mb-6 space-y-3 scroll-mt-20">
         <PushToggle />
+        <TelegramConnect />
       </div>
 
       <div className="mb-8">

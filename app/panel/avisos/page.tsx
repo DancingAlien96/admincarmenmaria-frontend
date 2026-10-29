@@ -373,7 +373,7 @@ function NuevoAviso({ opciones, onSent }: { opciones: Opciones; onSent: () => Pr
                 className="h-4 w-4 rounded border-gray-300"
               />
               <BellRing aria-hidden className="h-4 w-4 text-brand-600" />
-              Notificación al celular (a quienes las activaron)
+              Notificación al celular y Telegram (a quienes los activaron)
             </label>
             <label className="flex items-center gap-2 text-gray-700">
               <input

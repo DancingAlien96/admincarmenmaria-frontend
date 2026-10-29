@@ -970,7 +970,7 @@ export interface TeacherDetail {
 // Avisos (portal del alumno / docente)
 export interface MiAviso {
   id: string;
-  tipo: "general" | "pago" | "matricula" | "documento" | "calificacion";
+  tipo: "general" | "pago" | "matricula" | "documento" | "calificacion" | "admision" | "contenido";
   titulo: string;
   mensaje: string;
   url: string | null;

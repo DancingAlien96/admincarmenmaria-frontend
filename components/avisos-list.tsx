@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  BookOpen,
   ClipboardCheck,
+  GraduationCap,
   FileCheck,
   FileText,
   Megaphone,
@@ -19,6 +21,8 @@ const ICONOS: Record<string, LucideIcon> = {
   matricula: FileText,
   documento: FileCheck,
   calificacion: ClipboardCheck,
+  admision: GraduationCap,
+  contenido: BookOpen,
 };
 
 function fmtFecha(iso: string) {
