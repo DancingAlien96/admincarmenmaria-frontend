@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, KeyRound, UserRound } from "lucide-react";
+import { Building2, KeyRound, Mail, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -113,7 +113,7 @@ export default function DocentePerfilPage() {
       <div>
         <h1 className="text-xl font-bold text-brand-800 sm:text-2xl">Mi perfil</h1>
         <p className="text-sm text-gray-500">
-          Tus datos personales y la cuenta bancaria donde la escuela te deposita. Usuario: {perfil.email}
+          Tus datos personales y la cuenta bancaria donde la escuela te deposita.
         </p>
       </div>
       <DatosForm
@@ -123,6 +123,7 @@ export default function DocentePerfilPage() {
           await refresh();
         }}
       />
+      <CorreoForm actual={perfil.email} />
       <BancoForm perfil={perfil} onSaved={setPerfil} />
       <PasswordForm />
     </div>
@@ -339,6 +340,69 @@ function PasswordForm() {
         </div>
         <Aviso msg={msg} />
         <Guardar busy={busy} texto="Cambiar contraseña" />
+      </form>
+    </Tarjeta>
+  );
+}
+
+function CorreoForm({ actual }: { actual: string }) {
+  const [email, setEmail] = useState(actual);
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<Msg>(null);
+  const cambio = email.trim().toLowerCase() !== actual.toLowerCase();
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await api<{ pendiente: string }>("/api/docente/perfil/correo", {
+        method: "POST",
+        body: { email: email.trim(), password },
+      });
+      setPassword("");
+      setMsg({
+        ok: true,
+        text: `Te enviamos un enlace a ${r.pendiente}. Ábrelo para confirmar el cambio (vence en 24 horas). Mientras tanto sigues entrando con ${actual}.`,
+      });
+    } catch (err) {
+      setMsg({ ok: false, text: err instanceof ApiError ? err.message : "No se pudo cambiar el correo" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Tarjeta icono={Mail} titulo="Correo electrónico" descripcion="Es tu usuario para entrar al sistema y donde te llegan los avisos.">
+      <form onSubmit={guardar} className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className={labelClass}>Correo</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} />
+          </div>
+          {cambio && (
+            <div>
+              <label className={labelClass}>Tu contraseña actual *</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className={inputClass}
+              />
+            </div>
+          )}
+        </div>
+        <Aviso msg={msg} />
+        <button
+          type="submit"
+          disabled={busy || !cambio}
+          className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        >
+          {busy ? "Enviando…" : "Cambiar correo"}
+        </button>
       </form>
     </Tarjeta>
   );
