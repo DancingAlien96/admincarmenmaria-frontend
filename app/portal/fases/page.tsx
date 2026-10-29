@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Eye,
   Award,
   BookOpen,
   Brain,
@@ -17,7 +18,6 @@ import {
   CircleCheck,
   ClipboardCheck,
   ClipboardList,
-  Download,
   FileText,
   GraduationCap,
   HardDrive,
@@ -30,6 +30,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import type { FaseContentItem, FaseItem, StudentFases } from "@/lib/types";
 import { showAlert } from "@/lib/dialog";
+import { FileViewer } from "@/components/file-viewer";
 
 // Nota mínima por defecto si el servidor no la envía
 const APROBACION_DEFAULT = 70;
@@ -366,8 +367,12 @@ function Anillo({
 
 // Presentaciones y materiales del docente para la fase
 function Presentaciones({ items }: { items: FaseContentItem[] }) {
+  const [viendo, setViendo] = useState<{ url: string; titulo: string } | null>(null);
   return (
     <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      {viendo && (
+        <FileViewer url={viendo.url} titulo={viendo.titulo} onClose={() => setViendo(null)} />
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-4">
         <SectionTitle
           icon={Presentation}
@@ -421,15 +426,14 @@ function Presentaciones({ items }: { items: FaseContentItem[] }) {
                   </p>
                 </div>
                 {it.fileUrl && (
-                  <a
-                    href={it.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => setViendo({ url: it.fileUrl!, titulo: it.title })}
                     className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100"
                   >
-                    <Download aria-hidden className="h-4 w-4" />
-                    Descargar
-                  </a>
+                    <Eye aria-hidden className="h-4 w-4" />
+                    Ver
+                  </button>
                 )}
               </li>
             );

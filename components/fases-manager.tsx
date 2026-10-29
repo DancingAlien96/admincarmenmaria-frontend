@@ -4,6 +4,7 @@ import { Award, Brain, Check, ClipboardList, FileText, FlaskConical, Heart, Libr
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
+import { FileViewer } from "@/components/file-viewer";
 import { type FaseContentItem, type FaseItemKind } from "@/lib/types";
 import { showAlert, showConfirm } from "@/lib/dialog";
 
@@ -137,6 +138,8 @@ function SeccionCard({
   onDelete: (id: string) => void;
   readOnly: boolean;
 }) {
+  // Material abierto en el visor (sin salir a otra pestaña)
+  const [viendo, setViendo] = useState<{ url: string; titulo: string } | null>(null);
   const [adding, setAdding] = useState(false);
   // Si no es null, el formulario edita ese elemento en vez de crear uno nuevo
   const [editId, setEditId] = useState<string | null>(null);
@@ -237,6 +240,9 @@ function SeccionCard({
         )}
       </div>
 
+      {viendo && (
+        <FileViewer url={viendo.url} titulo={viendo.titulo} onClose={() => setViendo(null)} />
+      )}
       {items.length === 0 ? (
         <p className="text-sm text-gray-400">Nada publicado aún.</p>
       ) : (
@@ -266,14 +272,13 @@ function SeccionCard({
                 </p>
               </div>
               {it.fileUrl && (
-                <a
-                  href={it.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => setViendo({ url: it.fileUrl!, titulo: it.title })}
                   className="text-xs text-brand-600 hover:underline"
                 >
                   Ver
-                </a>
+                </button>
               )}
               {!readOnly && (
                 <>

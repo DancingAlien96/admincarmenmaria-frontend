@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ClipboardCheck, LayoutDashboard, Layers, Undo2 } from "lucide-react";
+import { Bell, ClipboardCheck, LayoutDashboard, Layers, Undo2, UserRound } from "lucide-react";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -48,7 +48,7 @@ export default function DocenteLayout({
       footerLinks={
         user.role === "ADMIN"
           ? [{ href: "/panel", label: "Volver al panel", icon: Undo2 }]
-          : []
+          : [{ href: "/docente/perfil", label: "Mi perfil", icon: UserRound }]
       }
       user={{
         name: user.name,

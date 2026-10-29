@@ -142,7 +142,34 @@ function InfoCard({ teacher }: { teacher: TeacherDetail }) {
         <Field label="Título / profesión" value={teacher.title} />
         <Field label="No. colegiado" value={teacher.collegiate} />
         <Field label="Especialidad" value={teacher.specialty} />
+        <Field label="Dirección" value={teacher.address} />
       </dl>
+      <div className="mt-5 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <p className="mb-3 text-sm font-semibold text-gray-800">Cuenta bancaria</p>
+        {teacher.bankAccountNumber ? (
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <Field label="Banco" value={teacher.bankName} />
+            <Field
+              label="Tipo de cuenta"
+              value={
+                teacher.bankAccountType === "MONETARIA"
+                  ? "Monetaria"
+                  : teacher.bankAccountType === "AHORRO"
+                    ? "Ahorro"
+                    : null
+              }
+            />
+            <Field label="Número de cuenta" value={teacher.bankAccountNumber} />
+            <Field label="Titular" value={teacher.bankAccountHolder} />
+          </dl>
+        ) : (
+          <p className="text-sm text-gray-500">
+            {teacher.userId
+              ? "El catedrático aún no ha registrado su cuenta bancaria en su perfil."
+              : "Aún no hay cuenta bancaria. El catedrático la registra en «Mi perfil» del portal docente."}
+          </p>
+        )}
+      </div>
       {teacher.notes && (
         <div className="mt-4">
           <dt className="text-xs uppercase text-gray-400">Notas</dt>

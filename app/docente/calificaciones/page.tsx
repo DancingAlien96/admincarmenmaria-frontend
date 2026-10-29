@@ -119,7 +119,6 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
   const [category, setCategory] = useState<GradeCategory>("TAREA");
   const [name, setName] = useState("");
   const [score, setScore] = useState("");
-  const [maxScore, setMaxScore] = useState("100");
   const [date, setDate] = useState("");
   const [busy, setBusy] = useState(false);
   // Actividades que la administración creó en cada fase (para sugerir nombres)
@@ -137,6 +136,9 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
     (a) => a.fase === Number(fase) && a.kind !== "MATERIAL"
   );
   const actividad = delaFase.find((a) => a.id === actividadId) ?? null;
+  // La nota es sobre los puntos que la administración le dio a la actividad;
+  // si no tiene puntos, sobre 100. El docente solo escribe la nota.
+  const notaMaxima = actividad?.puntos ? actividad.puntos : 100;
 
   function elegirActividad(id: string) {
     setActividadId(id);
@@ -172,7 +174,7 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
           category,
           name,
           score: Number(score),
-          maxScore: Number(maxScore) || 100,
+          maxScore: notaMaxima,
           date: date || null,
           faseItemId: actividadId || null,
         },
@@ -335,30 +337,23 @@ function GradeEditor({ student }: { student: DocenteStudent }) {
             className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
           />
         )}
-        {actividad?.puntos ? (
-          <p className="text-xs text-brand-700">
-            Esta actividad vale {actividad.puntos} pts de la fase: si saca{" "}
-            {maxScore || 100}/{maxScore || 100} obtiene los {actividad.puntos} pts.
-          </p>
-        ) : null}
-        <div className="grid grid-cols-3 gap-2">
-          <input
-            type="number"
-            step="0.01"
-            value={score}
-            onChange={(e) => setScore(e.target.value)}
-            placeholder="Nota"
-            required
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-          />
-          <input
-            type="number"
-            step="0.01"
-            value={maxScore}
-            onChange={(e) => setMaxScore(e.target.value)}
-            placeholder="Máx."
-            className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-          />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="relative">
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              max={notaMaxima}
+              value={score}
+              onChange={(e) => setScore(e.target.value)}
+              placeholder="Nota"
+              required
+              className="w-full rounded-lg border border-gray-300 py-1.5 pl-2 pr-14 text-sm"
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-xs text-gray-400">
+              / {notaMaxima}
+            </span>
+          </div>
           <input
             type="date"
             value={date}

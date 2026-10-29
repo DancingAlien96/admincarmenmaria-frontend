@@ -954,6 +954,13 @@ export interface TeacherDetail {
   collegiate: string | null;
   specialty: string | null;
   notes: string | null;
+  address: string | null;
+  // Cuenta bancaria (la llena el docente en su perfil)
+  bankName: string | null;
+  bankAccountType: "MONETARIA" | "AHORRO" | null;
+  bankAccountNumber: string | null;
+  bankAccountHolder: string | null;
+  userId: string | null;
   active: boolean;
   roles: TeacherRole[];
   documents: TeacherDocument[];

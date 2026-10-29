@@ -35,8 +35,12 @@ export async function api<T>(path: string, opts: Options = {}): Promise<T> {
   const data = isJson ? await res.json() : null;
 
   if (!res.ok) {
+    // En errores de validación, el primer motivo concreto (p. ej. "El DPI debe
+    // tener 13 dígitos") es más útil que el genérico "Datos invalidos".
+    const fieldErrors = data?.details?.fieldErrors as Record<string, string[]> | undefined;
+    const detalle = fieldErrors ? Object.values(fieldErrors).flat().find(Boolean) : undefined;
     const message =
-      (data && (data.error as string)) || `Error ${res.status}`;
+      detalle || (data && (data.error as string)) || `Error ${res.status}`;
     throw new ApiError(res.status, message, data?.details);
   }
 
